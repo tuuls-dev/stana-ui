@@ -48,8 +48,13 @@ build-examples:
     done
 
 # Run an example: Counter, Preferences, EditableCollection, or WindowConfiguration.
-run example="Counter":
-    swift run --package-path "Examples/$1"
+example example="Counter":
+    @example="${1#example=}"; \
+        case "$example" in \
+            Counter|Preferences|EditableCollection|WindowConfiguration) ;; \
+            *) printf 'Unknown example: %s\nUsage: just example [Counter|Preferences|EditableCollection|WindowConfiguration]\n' "$example" >&2; exit 1 ;; \
+        esac; \
+        swift run --package-path "Examples/$example"
 
 # Run the headless benchmark in release mode and print its JSON report.
 benchmark:

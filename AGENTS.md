@@ -15,7 +15,7 @@ Use Swift 6.4 or newer in Swift 6 mode; the deployment target is macOS 14.
 - `just build` / `just build-release`: debug/release builds.
 - `just test`: tests with Swift and native warnings treated as errors.
 - `just check`: sequential formatting and boundary checks, tests, API fixtures, runtime probes, all example builds, and release build.
-- `just run Preferences`: launch an example; `just run` defaults to Counter.
+- `just example Counter`: launch an example; `just example` defaults to Counter.
 - `just benchmark`: release-mode headless benchmark, emitting JSON.
 - `just test-gui`: opt-in GUI tests requiring a logged-in macOS window server.
 

@@ -60,11 +60,14 @@ just build           # Debug build
 just build-release   # Release build, Swift warnings as errors
 just test            # Tests, Swift and native warnings as errors
 just check           # All non-GUI checks, all four example builds, and release build
-just run             # Run Counter
-just run Preferences # Run another example
+just example         # Run Counter
+just example Counter # Run a named example
 just benchmark       # Release-mode headless benchmark; prints JSON
 just package Examples/Counter CounterApp dev.stana.counter
 ```
+
+The `example` recipe accepts a positional name (`just example Counter`) or an
+`example=` argument (`just example example=Counter`). Omitting it defaults to Counter.
 
 Formatting runs first in `just check` and CI; see [contributing](CONTRIBUTING.md#swift-formatting)
 for the spacing conventions. Individual checks are available as `just check-boundaries`, `just check-api`, and
