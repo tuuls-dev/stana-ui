@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
-#define STN_ABI_VERSION 1
+#define STN_ABI_VERSION 2
 typedef struct { double x, y, width, height; } stn_rect;
 typedef struct { double red, green, blue, alpha; } stn_color;
 typedef struct { double width, height, baseline; } stn_text_metrics;
@@ -13,7 +13,8 @@ typedef struct { const char *bytes; size_t length; } stn_utf8;
 // UTF-8 for the duration of the call; the adapter copies all retained data.
 typedef struct {
     int32_t kind; // 1 resize, 2 down, 3 move, 4 up, 5 scroll, 6 key,
-                  // 7 close, 8 AT activate, 9 AT focus, 10 appearance, 11 deactivate
+                  // 7 close, 8 AT activate, 9 AT focus, 10 appearance, 11 deactivate,
+                  // 12/13 image resources, 14 modal, 15 surface focus
     double x, y, a, b;
     uint64_t identity;
     stn_utf8 text;

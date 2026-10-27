@@ -1,6 +1,7 @@
 #ifndef STANA_MACOS_H
 #define STANA_MACOS_H
 #include "stana_abi.h"
+#include "stana_window.h"
 #ifdef __cplusplus
 extern "C" {
 #endif

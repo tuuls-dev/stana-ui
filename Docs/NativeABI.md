@@ -1,4 +1,4 @@
-# Native ABI, version 1
+# Native ABI, version 2
 
 `Sources/CStanaMacOS/include/stana_abi.h` defines Stana-owned fixed-width records. `stana_macos.h` declares the functions. Native/Swift sources are separate targets.
 
@@ -15,3 +15,21 @@
 - Revision counters do not wrap. Invalid ABI versions fail before surface creation.
 
 Do not pass Swift values, mutable node references, C++ containers, borrowed graphics contexts, or native object layouts across this boundary. No native exception is intended to cross it; allocation failure is reported by the raster result channel.
+
+## Window configuration additions (version 2)
+
+`stana_window.h` adds Stana-owned configuration, state, screen, toolbar and
+accessory records. Config strings/images/arrays and state arrays are borrowed for
+the call; the receiver copies anything retained. Callback tables are copied.
+Pointer disposition returns synchronously while the native adapter still owns
+the original mouse event; no event pointer crosses the ABI.
+
+Async operation IDs are monotonically allocated per Swift adapter. Native
+completion consumes the corresponding continuation once; cancellation/destruction
+removes it, making late callbacks harmless. Closing unregisters callbacks and
+observers before releasing native objects. Custom chrome uses independent opaque
+surface handles; destroying a surface detaches its view, never its parent window.
+
+Configuration resolution ignores unavailable features. Explicit action status
+codes distinguish unsupported, invalid-state, native-failure and cancelled
+results. The ABI remains private and version-matched, not a third-party plugin ABI.

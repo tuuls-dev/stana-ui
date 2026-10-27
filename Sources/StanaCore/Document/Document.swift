@@ -38,6 +38,8 @@ package struct NodeStyle: Equatable, Sendable {
     package var accessibilityHint: String?
     package var heading: Int?
     package var semanticGroup = false
+    // 0 inherit, -1 exclude, 1 native move, 16 | edge bits native resize.
+    package var windowInteraction: Int32 = 0
 }
 
 @MainActor package final class NodeRecord {
@@ -141,6 +143,8 @@ public struct STNNodeSnapshot: Sendable, Equatable {
     package var pressed: STNNodeID?
     package var captured: STNNodeID?
     package var viewport: STNSize
+    package var windowBackgroundDragging = false
+    package var surfaceBackground = STNColor.background
     package var isClosed = false
     package var dark = false
     package var highContrast = false
@@ -382,6 +386,7 @@ public struct STNNodeSnapshot: Sendable, Equatable {
             for child in node.children.reversed() { if let hit = visit(child, clip: childClip) { return hit } }
             if node.bounds.contains(point),
                 node.isFocusable || node.onPointerDown != nil || node.onPointerMove != nil || node.onPointerUp != nil
+                    || node.style.windowInteraction != 0 || (node.kind == .root && windowBackgroundDragging)
             {
                 return node
             }

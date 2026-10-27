@@ -23,11 +23,15 @@ import StanaText
     package var onClose: (() -> Void)?
     private var environmentSubscriptions: [STNSubscription] = []
     private var closed = false
+    package var onStable: (() -> Void)?
+    package let safeContentBounds: STNSignal<STNRect>
+    package var hasMarkedText: Bool { editors.values.contains { $0.markedText != nil } }
     private var editorOffsets: [STNNodeID: Double] = [:]
     private var modalFocus: STNNodeID?
     private var nativeFocus: STNNodeID?
     private var resettingComposition: Set<STNNodeID> = []
     package init(size: STNSize, text: any TextService, environment: STNEnvironment = .init()) {
+        safeContentBounds = STNSignal(.init(width: size.width, height: size.height))
         self.environment = environment
         document = Document(size: size)
         self.text = text
@@ -77,8 +81,17 @@ import StanaText
         self.window = window
         window.onDraw = { [weak self] in self?.draw() }
         window.onEvent = { [weak self] in self?.receive($0) }
+        window.onPointer = { [weak self] phase, point in self?.pointer(phase, at: point) ?? 0 }
         (window as? MacOSWindow)?.onText = { [weak self] kind, text, range, selected, revision in
             self?.edit(kind, text: text, range: range, selected: selected, expectedRevision: revision)
+        }
+        if window.onState == nil {
+            window.onState = { [weak self] state in
+                guard let self else { return }
+                self.safeContentBounds.value = state.safeContentBounds
+                self.document.viewport = state.contentSize
+                self.document.changed(self.document.root, .all)
+            }
         }
         commit()
     }
@@ -97,6 +110,9 @@ import StanaText
             }
         }
         if document.dirty.contains(.paint) { window?.requestRedraw() }
+        if !hasMarkedText {
+            ReactiveRuntime.shared.afterCommit { [weak self] in self?.onStable?() }
+        }
     }
     package func draw() {
         guard !closed, let window, document.viewport.width > 0, document.viewport.height > 0 else { return }
@@ -126,6 +142,7 @@ import StanaText
         window = nil
         onClose?()
         onClose = nil
+        onStable = nil
     }
     package func installEditor(_ node: NodeRecord, binding: STNBinding<String>) {
         let editor = TextBuffer(binding.value)
@@ -226,6 +243,25 @@ import StanaText
                 document.changed(node, [.paint, .semantics])
             } catch { report(.invalidTextRange) }
         }
+        if !hasMarkedText {
+            ReactiveRuntime.shared.afterCommit { [weak self] in self?.onStable?() }
+        }
+    }
+    package func pointer(_ phase: Int, at point: STNPoint) -> Int32 {
+        if phase == 3 { return document.hitTest(point)?.kind == .textField ? 1 : 0 }
+        let action = document.pointer(phase == 0 ? .down : phase == 1 ? .move : .up, at: point)
+        if action != 0 {
+            document.pointer(.cancel, at: point)
+            return action
+        }
+        if phase == 0, let focused = document.focused, let node = document.nodes[focused],
+            let editor = editors[focused], node.bounds.contains(point)
+        {
+            let x = point.x - node.bounds.minX - node.style.padding.leading + (editorOffsets[focused] ?? 0)
+            let index = text.index(in: editor.text, x: x, font: node.style.font)
+            try? editor.select(NSRange(location: index, length: 0))
+        }
+        return 0
     }
     private func editingCommand(_ command: String, editor: TextBuffer, node: NodeRecord) throws {
         switch command {
@@ -271,14 +307,7 @@ import StanaText
             document.viewport = size
             document.changed(document.root, .all)
         case .pointer(let phase, let point):
-            document.pointer(phase == 0 ? .down : phase == 1 ? .move : .up, at: point)
-            if phase == 0, let focused = document.focused, let node = document.nodes[focused],
-                let editor = editors[focused], node.bounds.contains(point)
-            {
-                let x = point.x - node.bounds.minX - node.style.padding.leading + (editorOffsets[focused] ?? 0)
-                let index = text.index(in: editor.text, x: x, font: node.style.font)
-                try? editor.select(NSRange(location: index, length: 0))
-            }
+            _ = pointer(phase, at: point)
         case .scroll(let point, let dx, let dy): document.scroll(at: point, dx: dx, dy: dy)
         case .key(let key, let shift, _):
             if key == "\t" || key == "\u{19}" {
@@ -293,6 +322,11 @@ import StanaText
                 environment.isDark.value = dark
                 environment.highContrast.value = contrast
                 environment.reducedMotion.value = motion
+            }
+        case .surfaceFocus(let focused):
+            if !focused {
+                document.pointer(.cancel, at: .zero)
+                document.setFocus(nil)
             }
         case .deactivated:
             document.pointer(.cancel, at: .zero)

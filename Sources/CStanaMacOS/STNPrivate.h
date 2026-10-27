@@ -15,15 +15,41 @@
 @property(nonatomic) size_t pixelWidth, pixelHeight;
 @property(nonatomic) double scale;
 @property(nonatomic) BOOL closing;
+@property(nonatomic) BOOL applyingConfiguration;
+@property(nonatomic) BOOL draggingWindow;
+@property(nonatomic, strong) NSTimer *dragTimer;
+@property(nonatomic) int32_t resizeEdges;
+@property(nonatomic) NSRect resizeOriginal;
+@property(nonatomic) NSPoint resizeStart;
+@property(nonatomic) NSSize configuredAspect, configuredIncrements;
+@property(nonatomic) BOOL aspectIsFrame, incrementsAreFrame;
+@property(nonatomic) BOOL surfaceOpaque;
+@property(nonatomic) BOOL isSurface;
+@property(nonatomic) BOOL followsMinimizedTitle;
+@property(nonatomic, strong) id toolbarDelegate;
+@property(nonatomic, strong) NSDictionary<NSString *, NSTitlebarAccessoryViewController *> *accessories;
+@property(nonatomic) int32_t keyPreference, mainPreference, role, fullscreenTransition;
+@property(nonatomic) uint64_t fullscreenOperation;
+@property(nonatomic) stn_window_callbacks windowCallbacks;
 @property(nonatomic) NSUInteger modalDepth;
 @property(nonatomic, strong) NSDictionary<NSNumber *, id> *semanticNodes;
 @property(nonatomic, strong) NSMutableDictionary<NSNumber *, STNTextSnapshot *> *pendingText;
 @property(nonatomic) uint64_t semanticRevision;
 @property(nonatomic, strong) id appearanceObserver;
 @property(nonatomic, strong) id displayObserver;
+@property(nonatomic, strong) NSWindowTabGroup *observedTabGroup;
+@property(nonatomic) BOOL observingWindow;
 - (void)emit:(stn_event)event;
 - (void)textRequest:(int)kind text:(NSString *)text replacement:(NSRange)replacement selected:(NSRange)selected;
 - (void)textRequest:(int)kind text:(NSString *)text replacement:(NSRange)replacement selected:(NSRange)selected revision:(uint64_t)revision;
+@end
+
+@interface STNWindowHost (Configuration)
+- (void)publishState;
+- (void)startObservingWindow;
+- (void)stopObservingWindow;
+- (void)completeOperation:(uint64_t)operation status:(int32_t)status result:(int32_t)result;
+- (void)becameIdle;
 @end
 
 @interface STNTextSnapshot : NSObject

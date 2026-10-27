@@ -52,7 +52,9 @@ package struct EditingPaint {
             if style.background.alpha > 0 {
                 local.append(.fill(bounds, color(style.background), radius: style.cornerRadius))
             }
-            if node.kind == .root { local.append(.fill(viewport, color(.background), radius: 0)) }
+            if node.kind == .root {
+                local.append(.fill(viewport, color(document.surfaceBackground), radius: 0))
+            }
             if node.kind == .button || node.kind == .textField {
                 local.append(
                     .fill(

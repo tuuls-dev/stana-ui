@@ -52,6 +52,7 @@ Builders mount once. Changing `count` updates the existing text node; it does no
 swift run --package-path Examples/Counter
 swift run --package-path Examples/Preferences
 swift run --package-path Examples/EditableCollection
+swift run --package-path Examples/WindowConfiguration
 ```
 
 If a build reports `unknown argument: '-target-arch-variant'` followed by missing
@@ -64,6 +65,7 @@ Each example is a separate consumer package importing only `Stana`.
 
 - **Counter:** state, derived text, a shared command, keyboard shortcut, and menu.
 - **Preferences:** reusable fields, two-way bindings, toggles, save dialog, and asynchronous file writing.
+- **Window Configuration:** reactive framed/frameless chrome, native drag regions, control exclusions, and a custom resize grip.
 - **Editable Collection:** stable observable rows, editing, reordering, removal, and scrolling. This is not a virtualized list.
 
 ## The small mental model
@@ -80,13 +82,13 @@ Each example is a separate consumer package importing only `Stana`.
 
 Properties come before children. Actions belong in properties. Ordinary Swift `if` and `for` in a builder run at mount time; use structural components for later changes.
 
-Preview reactive inputs are text (labels/buttons/toggles), container background and opacity, control enabled state, accessibility labels, window titles, canvas drawings, command title/enabled/checked state, and structural sources. Other properties are mount-time configuration. Editable controls use bindings; environment theme/direction/text scale can change independently.
+Preview reactive inputs are text (labels/buttons/toggles), container background and opacity, control enabled state, accessibility labels, window titles, canvas drawings, command title/enabled/checked state, and structural sources. Window configuration also accepts constant/signal/computed snapshots; unavailable options are ignored by the host. Other properties are mount-time configuration. Editable controls use bindings; environment theme/direction/text scale can change independently.
 
 ## Architecture
 
 Swift owns the document, reactivity, layout, custom controls, editing state, scene, and semantic projection. A private Objective-C bridge uses AppKit only for host integration, IME, accessibility, menus, and system dialogs. There are no AppKit content controls, no SwiftUI, and no external binary dependencies. Rendering uses Core Graphics and Core Text behind portable service contracts.
 
-See [architecture](Docs/Architecture.md), [API decisions](Docs/Decisions/0002-public-api-contract.md), and the original [design specification](ramblings/design_thoughts.md).
+See [window configuration](Sources/Stana/Documentation.docc/WindowConfiguration.md), [architecture](Docs/Architecture.md), [API decisions](Docs/Decisions/0002-public-api-contract.md), and the original [design specification](ramblings/design_thoughts.md).
 
 ## Test and package
 

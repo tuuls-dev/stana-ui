@@ -43,3 +43,15 @@ This is a local implementation baseline, not performance qualification, a 60/120
 - GitHub Actions execution. The workflow requires a runner providing Swift 6.4; local successful checks are not a hosted CI result.
 
 The correct release tier remains **macOS developer preview**.
+
+## Window configuration — 2026-10-27
+
+The feature-based window configuration change passed the full **73-test optimized
+suite with native GUI tests enabled**, Swift warnings as errors and native `-Werror`.
+The 26 added tests cover configuration resolution/lifetime, frameless interaction,
+constraints and transparency, native chrome/editor identity, relationships,
+sheets, saved geometry and fullscreen completion. Consumer/misuse API fixtures,
+runtime-fault probes, boundary checks and all four example builds also passed.
+
+See [Windows verification](Windows.md) for the capability matrix, exact local
+scope, and the remaining manual and minimum-OS qualification work.

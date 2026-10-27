@@ -16,3 +16,5 @@ let fileMenu = STNMenu(properties: .init(title: "File")) { save }
 `STNFileDialog.open`/`save` return nil on cancellation. `STNAlert.show` presents asynchronously. `STNClipboard` exposes plain text. Native AppKit types never appear in these APIs.
 
 Open additional windows with `STNApplication.open`, close an individual window with `window.close()`, and stop the application with `STNApplication.stop()`. Keep authoritative model state application-owned when sharing it across windows.
+
+See <doc:WindowConfiguration> for feature-based window settings, frameless interaction, toolbars, native relationships, and observed window state.

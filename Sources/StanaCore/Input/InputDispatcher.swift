@@ -30,7 +30,7 @@ public enum STNEventPhase: Sendable { case capture, target, bubble }
 package enum PointerPhase { case down, move, up, cancel }
 
 extension Document {
-    package func pointer(_ phase: PointerPhase, at point: STNPoint) {
+    @discardableResult package func pointer(_ phase: PointerPhase, at point: STNPoint) -> Int32 {
         let target = captured.flatMap { nodes[$0] } ?? hitTest(point)
         guard let target else {
             if phase == .up || phase == .cancel {
@@ -38,7 +38,7 @@ extension Document {
                 captured = nil
                 changed(root, .paint)
             }
-            return
+            return 0
         }
         var path: [NodeRecord] = []
         var current: NodeRecord? = target
@@ -47,6 +47,7 @@ extension Document {
             current = node.parent
         }
         let event = STNPointerEvent(position: point)
+        var windowAction: Int32 = 0
         event.target = target.id
         event.capture = { [weak self, weak target] in self?.captured = target?.id }
         event.release = { [weak self] in self?.captured = nil }
@@ -92,6 +93,19 @@ extension Document {
             guard !event.isDefaultPrevented else { return }
             switch phase {
             case .down:
+                let interaction = path.first { $0.style.windowInteraction != 0 }?.style.windowInteraction ?? 0
+                let interactive = path.contains {
+                    $0.isFocusable || $0.onActivate != nil || $0.onPointerDown != nil
+                        || $0.onPointerMove != nil || $0.onPointerUp != nil
+                        || $0.onPointerDownCapture != nil || $0.onPointerMoveCapture != nil
+                        || $0.onPointerUpCapture != nil || $0.kind == .scroll
+                }
+                if captured == nil, !interactive, target.scope.isAlive,
+                    path.allSatisfy({ $0.style.visibility == .visible && $0.style.isEnabled && !$0.style.inert }),
+                    interaction != -1
+                {
+                    windowAction = interaction > 0 ? interaction : (windowBackgroundDragging ? 1 : 0)
+                }
                 if target.isFocusable {
                     setFocus(target.id)
                     pressed = target.id
@@ -101,6 +115,7 @@ extension Document {
             default: break
             }
         }
+        return target.scope.isAlive && nodes[target.id] != nil ? windowAction : 0
     }
     package func scroll(at point: STNPoint, dx: Double, dy: Double) {
         ensureGeometry?()

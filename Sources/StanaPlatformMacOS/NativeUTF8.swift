@@ -2,8 +2,8 @@ import CStanaMacOS
 
 extension String {
     /// The borrowed bytes remain valid for the entire synchronous native call.
-    package func withNativeUTF8<Result>(_ body: (stn_utf8) -> Result) -> Result {
-        utf8CString.withUnsafeBufferPointer { body(stn_utf8(bytes: $0.baseAddress, length: $0.count - 1)) }
+    package func withNativeUTF8<Result>(_ body: (stn_utf8) throws -> Result) rethrows -> Result {
+        try utf8CString.withUnsafeBufferPointer { try body(stn_utf8(bytes: $0.baseAddress, length: $0.count - 1)) }
     }
 }
 

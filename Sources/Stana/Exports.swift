@@ -1,6 +1,7 @@
 import StanaAccessibility
 import StanaCore
 import StanaLayout
+import StanaPlatform
 import StanaPrimitives
 import StanaText
 
@@ -34,3 +35,8 @@ public typealias STNConstraints = StanaLayout.STNConstraints
 public typealias STNAccessibilityRole = StanaAccessibility.STNAccessibilityRole
 public typealias STNSemanticNode = StanaAccessibility.STNSemanticNode
 public typealias STNSemanticSnapshot = StanaAccessibility.STNSemanticSnapshot
+
+public typealias STNWindowError = StanaPlatform.STNWindowError
+public typealias STNWindowState = StanaPlatform.STNWindowState
+public typealias STNWindowResolution = StanaPlatform.STNWindowResolution
+public typealias STNScreen = StanaPlatform.STNScreen

@@ -24,7 +24,7 @@ let targets: [Target] = [
         ], resources: [.copy("Resources")]),
     .target(
         name: "StanaTesting",
-        dependencies: ["Stana", "StanaPrimitives", "StanaCore", "StanaText", "StanaScene", "StanaAccessibility"]),
+        dependencies: ["Stana", "StanaPrimitives", "StanaCore", "StanaText", "StanaScene", "StanaAccessibility", "StanaPlatform", "StanaGraphics"]),
     .testTarget(name: "StanaCoreTests", dependencies: ["StanaCore"]),
     .testTarget(name: "StanaLayoutTests", dependencies: ["StanaLayout"]),
     .testTarget(name: "StanaTextTests", dependencies: ["StanaText"]),

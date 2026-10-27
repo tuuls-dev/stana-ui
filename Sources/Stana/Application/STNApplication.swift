@@ -5,6 +5,8 @@ import StanaPrimitives
 
 @MainActor public enum STNApplication {
     private static var windows: [ObjectIdentifier: STNWindow] = [:]
+    public static var screens: [STNScreen] { MacOSHost.screens }
+    public static func removeSavedWindowFrame(named name: String) { MacOSHost.removeSavedFrame(name) }
     private static var menus: [STNMenu] = []
     /// Enters the native event loop. Call from a synchronous `@MainActor` entry point.
     public static func run(windows: [STNWindow], menus: [STNMenu] = []) {
@@ -16,27 +18,13 @@ import StanaPrimitives
     }
     public static func open(_ window: STNWindow) throws {
         if window.session != nil { return }
-        let host = MacOSHost()
-        let session = MountSession(
-            size: window.properties.size, text: host.textService, environment: window.properties.environment)
-        let native = try host.createWindow(title: window.properties.title.read(), size: window.properties.size)
-        window.session = session
+        try window.open(using: MacOSHost())
+        guard window.isOpen else { return }
         windows[ObjectIdentifier(window)] = window
-        session.onClose = { [weak window] in
+        window.onClosed = { [weak window] in
             guard let window else { return }
-            window.session = nil
             windows.removeValue(forKey: ObjectIdentifier(window))
         }
-        session.attach(native)
-        session.mount(window.content)
-        if window.properties.title.reactive {
-            let observation = ValueObservation(read: window.properties.title.read, equals: { $0 == $1 }) {
-                [weak native] in native?.setTitle($0)
-            }
-            session.document.root.scope.own { observation.cancel() }
-            ReactiveRuntime.shared.batch { ReactiveRuntime.shared.enqueue(observation) }
-        }
-        native.show()
     }
     public static func install(menus: [STNMenu]) {
         for menu in self.menus { menu.uninstall() }

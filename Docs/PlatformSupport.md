@@ -8,7 +8,7 @@ The deployment target is not evidence that every OS/architecture combination has
 
 ## Included
 
-Boxes/stacks/overlays, spacers, shaped labels, bitmap images, custom buttons/toggles, single-line editing, vertical scrolling, explicit conditional/keyed regions, reusable components, focus grouping, recorded decorative drawing, multiple windows, commands/menus/shortcuts, clipboard, system file panels/alerts, and unsigned app assembly.
+Boxes/stacks/overlays, spacers, shaped labels, bitmap images, custom buttons/toggles, single-line editing, vertical scrolling, explicit conditional/keyed regions, reusable components, focus grouping, recorded decorative drawing, multiple configurable windows (including frameless windows), native panels/sheets/tabs, toolbars and retained chrome surfaces, commands/menus/shortcuts, clipboard, system file panels/alerts, and unsigned app assembly.
 
 ## Known boundaries
 
@@ -21,3 +21,5 @@ Boxes/stacks/overlays, spacers, shaped labels, bitmap images, custom buttons/tog
 - User-session VoiceOver and IME verification must be completed and recorded before beta qualification.
 
 No unavailable API is exposed as a successful no-op. Treat issues discovered during preview as tracked limitations, not blanket cross-platform support.
+
+Window configuration coverage, ignored-feature behavior and remaining manual qualification are documented in [Windows verification](Verification/Windows.md).

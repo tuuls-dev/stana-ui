@@ -10,8 +10,10 @@ import StanaText
 @MainActor package final class MacOSHost: PlatformHost {
     package let textService: any TextService = CoreTextService()
     package init() {}
-    package func createWindow(title: String, size: STNSize) throws -> any PlatformWindow {
-        try MacOSWindow(title: title, size: size)
+    package func createWindow(title: String, size: STNSize, options: STNWindowOptions = .init()) throws
+        -> any PlatformWindow
+    {
+        try MacOSWindow(title: title, size: size, options: options)
     }
     package func run() { stn_app_run() }
 }
@@ -20,16 +22,33 @@ import StanaText
     package private(set) var handle: UnsafeMutableRawPointer?
     package var onEvent: ((PlatformEvent) -> Void)?
     package var onDraw: (() -> Void)?
+    package var onState: ((STNWindowState) -> Void)?
+    package var onPointer: ((Int, STNPoint) -> Int32)?
+    package var shouldClose: (() -> Bool)?
+    package var onIdle: (() -> Void)?
+    package var state = STNWindowState()
+    package var options = STNWindowOptions()
+    package var currentDark = false
+    package var onCommand: ((UInt64) -> Void)?
+    package var isSurface = false
+    package var operationSerial: UInt64 = 0
+    package var operations: [UInt64: CheckedContinuation<Int32, any Error>] = [:]
     package var onText: ((Int32, String, NSRange?, NSRange, UInt64) -> Void)?
     private var graphics: CoreGraphicsRenderer!
     private var semantics: MacOSAccessibility!
     package var renderer: any Renderer { graphics }
     package var accessibility: any AccessibilityBridge { semantics }
-    package init(title: String, size: STNSize) throws {
+    package init(title: String, size: STNSize, options: STNWindowOptions = .init(), parent: MacOSWindow? = nil) throws {
+        try options.validate()
+        guard size.width.isFinite, size.height.isFinite, size.width > 0, size.height > 0 else {
+            throw STNWindowError.invalidConfiguration("Initial content size must be finite and positive")
+        }
         guard stn_abi_version() == STN_ABI_VERSION else { throw STNError.nativeFailure("Native ABI version mismatch") }
+        isSurface = parent != nil
         handle = title.withNativeUTF8 { nativeTitle in
-            stn_window_create(
-                nativeTitle, size.width, size.height, Unmanaged.passUnretained(self).toOpaque(),
+            stn_window_create_host(
+                nativeTitle, size.width, size.height, options.creation.role.rawValue, parent?.handle,
+                Unmanaged.passUnretained(self).toOpaque(),
                 { context, event in
                     guard let context, let event else { return }
                     MainActor.assumeIsolated {
@@ -58,6 +77,16 @@ import StanaText
         guard handle != nil else { throw STNError.nativeFailure("Could not create native window") }
         graphics = CoreGraphicsRenderer(window: self)
         semantics = MacOSAccessibility(window: self)
+        installWindowCallbacks()
+        do {
+            if parent == nil {
+                try apply(options)
+                place(options.creation)
+            }
+        } catch {
+            close()
+            throw error
+        }
     }
     package func show() { if let handle { stn_window_show(handle) } }
     package func requestRedraw() { if let handle { stn_window_redraw(handle) } }
@@ -68,7 +97,17 @@ import StanaText
         onEvent = nil
         onDraw = nil
         onText = nil
+        onState = nil
+        onPointer = nil
+        shouldClose = nil
+        onIdle = nil
+        onCommand = nil
+        cancelPendingOperations()
         stn_window_destroy(handle)
+        state.isOpen = false
+        state.isVisible = false
+        state.isKey = false
+        state.isMain = false
     }
     package func receive(_ e: stn_event) {
         switch e.kind {
@@ -81,12 +120,15 @@ import StanaText
         case 7: onEvent?(.close)
         case 8: onEvent?(.activate(e.identity))
         case 9: onEvent?(.focus(e.identity))
-        case 10: onEvent?(.appearance(e.x != 0, e.y != 0, e.a != 0))
+        case 10:
+            currentDark = e.x != 0
+            onEvent?(.appearance(e.x != 0, e.y != 0, e.a != 0))
         case 11: onEvent?(.deactivated)
         case 12, 13:
             graphics?.invalidate()
             onEvent?(.resourcesChanged(e.kind == 13))
         case 14: onEvent?(.modalState(e.x != 0))
+        case 15: onEvent?(.surfaceFocus(e.x != 0))
         default: break
         }
     }
