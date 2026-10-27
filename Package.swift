@@ -52,7 +52,7 @@ for target in targets where target.name != "CStanaMacOS" {
 
 let package = Package(
 	name: "stana-ui",
-	platforms: [.macOS(.v14)],
+	platforms: [.macOS(.v26)],
 	products: [
 		.library(name: "Stana", targets: ["Stana"]),
 		.library(name: "StanaTesting", targets: ["StanaTesting"]),

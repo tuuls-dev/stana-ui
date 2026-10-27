@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
 	name: "WindowConfiguration",
-	platforms: [.macOS(.v14)],
+	platforms: [.macOS(.v26)],
 	dependencies: [.package(path: "../..")],
 	targets: [
 		.executableTarget(name: "WindowConfigurationApp", dependencies: [.product(name: "Stana", package: "stana-ui")])

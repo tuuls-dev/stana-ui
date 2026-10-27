@@ -43,7 +43,7 @@ The macOS backend uses Core Graphics and Core Text, with a private Objective-C b
 
 ### Requirements
 
-- macOS 14 or later.
+- macOS 26 or later.
 - Swift 6.4 or newer, using Swift 6 language mode and a macOS SDK.
 - A logged-in graphical macOS session to open example windows.
 
@@ -67,7 +67,7 @@ import PackageDescription
 
 let package = Package(
 	name: "Counter",
-	platforms: [.macOS(.v14)],
+	platforms: [.macOS(.v26)],
 	dependencies: [
 		.package(url: "https://github.com/tuuls-dev/stana-ui.git", exact: "0.0.1")
 	],

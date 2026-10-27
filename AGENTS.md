@@ -8,7 +8,7 @@ Stana UI is a swift toolkit for creating crossplatform desktop apps. `Sources/St
 
 ## Build, Test, and Development Commands
 
-Use Swift 6.4 or newer in Swift 6 mode; the deployment target is macOS 14.
+Use Swift 6.4 or newer in Swift 6 mode; the deployment target is macOS 26.
 
 - `just`: list available recipes.
 - `just format` / `just check-format`: format all repository Swift files or check formatting without edits.

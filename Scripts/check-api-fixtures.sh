@@ -11,7 +11,7 @@ from pathlib import Path
 root,probe=sys.argv[1:]
 Path(probe,'Package.swift').write_text('''// swift-tools-version: 6.4
 import PackageDescription
-let package = Package(name: "Probe", platforms: [.macOS(.v14)],
+let package = Package(name: "Probe", platforms: [.macOS(.v26)],
     dependencies: [.package(path: %s)],
     targets: [.target(name: "Probe", dependencies: [.product(name: "Stana", package: "stana-ui")])])
 ''' % json.dumps(root))

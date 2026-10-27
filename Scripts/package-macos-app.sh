@@ -36,7 +36,7 @@ from pathlib import Path
 app,product,identity=sys.argv[1:]
 info={'CFBundleName':product,'CFBundleDisplayName':product,'CFBundleExecutable':product,
       'CFBundleIdentifier':identity,'CFBundlePackageType':'APPL','CFBundleVersion':'1',
-      'CFBundleShortVersionString':'0.1.0','LSMinimumSystemVersion':'14.0',
+      'CFBundleShortVersionString':'0.1.0','LSMinimumSystemVersion':'26.0',
       'NSHighResolutionCapable':True}
 with (Path(app)/'Contents/Info.plist').open('wb') as f: plistlib.dump(info,f)
 PY

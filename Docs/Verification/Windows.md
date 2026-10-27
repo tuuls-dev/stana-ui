@@ -84,7 +84,7 @@ Counter, Preferences and Editable Collection consumer builds are also checked.
 - Multiple displays, negative origins, mixed scales, hot-plug and saved offscreen geometry.
 - Stage Manager, Mission Control, fullscreen tiling and nonactivating utility panels.
 - Toolbar customization, persisted layouts, native sharing consent and critical sheets.
-- Minimum macOS 14 / Intel matrix, rather than inferring support from the deployment target.
+- Minimum macOS 26 / Intel matrix, rather than inferring support from the deployment target.
 
 ## Local result — 2026-10-27
 

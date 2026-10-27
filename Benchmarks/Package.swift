@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
 	name: "StanaBenchmarks",
-	platforms: [.macOS(.v14)],
+	platforms: [.macOS(.v26)],
 	dependencies: [.package(path: "..")],
 	targets: [
 		.executableTarget(

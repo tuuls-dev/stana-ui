@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
 	name: "StanaFaultFixtures",
-	platforms: [.macOS(.v14)],
+	platforms: [.macOS(.v26)],
 	dependencies: [.package(path: "../..")],
 	targets: [.executableTarget(name: "FaultProbe", dependencies: [.product(name: "Stana", package: "stana-ui")])]
 )
