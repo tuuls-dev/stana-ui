@@ -1,136 +1,157 @@
 # Stana UI
 
-A retained, custom-drawn desktop UI toolkit for Swift Package Manager.
+A Swift toolkit for building desktop applications with retained UI, explicit state, and properties-first composition.
 
-**Developer preview:** macOS backend; Swift 6.4; macOS 14 deployment target. Windows and Linux are architectural targets, not implemented hosts. See [platform support](Docs/PlatformSupport.md) for qualification and limitations.
+Compose a window once, then update its existing nodes through signals. Ordinary state changes do not rerun parent builders. Stana provides its own controls and rendering, with native windows, text services, and accessibility behind platform interfaces.
 
-## Start with a working application
+**Developer preview — macOS only today.** Stana is designed for cross-platform desktop applications, but Windows and Linux backends are not implemented. APIs may change; this preview makes no production-readiness or performance guarantees. See [platform support and limitations](Docs/PlatformSupport.md).
 
-Add this repository as a SwiftPM dependency and depend on its `Stana` product. Until a release is tagged, use a local path or an explicitly pinned revision.
-
-```swift
-// Package.swift
-// swift-tools-version: 6.4
-import PackageDescription
-
-let package = Package(
-    name: "MyApp",
-    platforms: [.macOS(.v14)],
-    dependencies: [.package(path: "../stana-ui")],
-    targets: [.executableTarget(
-        name: "MyApp",
-        dependencies: [.product(name: "Stana", package: "stana-ui")]
-    )]
-)
-```
+## A small example
 
 ```swift
 import Stana
 
 @main
-struct MyApp {
-    @MainActor static func main() {
-        let count = STNSignal(0)
-        let window = STNWindow(properties: .init(title: "Hello, Stana")) {
-            STNVStack(properties: .init(spacing: 16, padding: 24)) {
-                STNText(properties: .init(text: count.map { "Count: \($0)" }))
-                STNButton(properties: .init(text: "Increment", onActivate: {
-                    count.value += 1
-                }))
-            }
-        }
-        STNApplication.run(windows: [window])
-    }
+struct CounterApp {
+	@MainActor static func main() {
+		let count = STNSignal(0)
+		let window = STNWindow(properties: .init(title: "Counter", size: .init(width: 480, height: 320))) {
+			STNVStack(properties: .init(spacing: 16, padding: 28)) {
+				STNText(properties: .init(text: count.map { "Count: \($0)" }))
+				STNButton(properties: .init(text: "Increment", onActivate: { count.value += 1 }))
+			}
+		}
+
+		STNApplication.run(windows: [window])
+	}
 }
 ```
 
-Builders mount once. Changing `count` updates the existing text node; it does not rerun the window or stack builder.
+`count.map` creates a reactive value for the label. Reading `count.value` while building the label would capture a snapshot instead. Use `.value` inside actions to read or change state.
 
-## Developer commands
+## What you can build with it
 
-The optional root `justfile` provides shortcuts for the existing Swift commands and
-scripts. Install `just` with `brew install just`; Swift 6.4 or newer and macOS are
-still required. Commands also work from repository subdirectories.
+- **Reactive interfaces:** signals, computed values, synchronous transactions, explicit conditional and keyed regions, and reusable components with mount-scoped state and tasks.
+- **Desktop layouts:** stacks, boxes, overlays, spacers, bitmap images, decorative canvas drawing, and vertical scrolling.
+- **Interactive controls:** buttons, toggles, focus groups, and single-line text fields with selection, grouped undo, styling, and native macOS text services.
+- **Desktop integration:** configurable windows, frameless windows, panels, sheets, tabs, toolbars, menus, keyboard shortcuts, clipboard access, file dialogs, and alerts.
+- **Headless testing:** the `StanaTesting` product provides deterministic consumer test hosts without starting a native application.
 
-```sh
-just                 # List available commands
-just format          # Format Swift files with the bundled formatter (tabs, four-column width)
-just check-format    # Check Swift formatting without editing files
-just build           # Debug build
-just build-release   # Release build, Swift warnings as errors
-just test            # Tests, Swift and native warnings as errors
-just check           # All non-GUI checks, all five example builds, and release build
-just version patch   # Confirm, bump VERSION, commit, tag, and push (also minor/major)
-just example         # Run Counter
-just example Counter # Run a named example
-just benchmark       # Release-mode headless benchmark; prints JSON
-just package Examples/Counter CounterApp dev.stana.counter
-```
+The macOS backend uses Core Graphics and Core Text, with a private Objective-C bridge to AppKit. Consumer code imports `Stana`, not AppKit or SwiftUI.
 
-The `example` recipe accepts a positional name (`just example Counter`) or an
-`example=` argument (`just example example=Counter`). Omitting it defaults to Counter.
+## Try it
 
-Formatting runs first in `just check` and CI; see [contributing](CONTRIBUTING.md#swift-formatting)
-for the spacing conventions. Individual checks are available as `just check-boundaries`, `just check-api`, and
-`just check-runtime`; `just build-examples` builds all five examples. Direct Swift
-commands and scripts below remain supported, and CI does not require `just`.
+### Requirements
 
-## Run the examples
+- macOS 14 or later.
+- Swift 6.4 or newer, using Swift 6 language mode and a macOS SDK.
+- A logged-in graphical macOS session to open example windows.
+
+Check your toolchain with `swift --version`, then run the Counter example:
 
 ```sh
+git clone https://github.com/tuuls-dev/stana-ui.git
+cd stana-ui
 swift run --package-path Examples/Counter
-swift run --package-path Examples/Preferences
-swift run --package-path Examples/EditableCollection
-swift run --package-path Examples/WindowConfiguration
-swift run --package-path Examples/TextFields
 ```
 
-If a build reports `unknown argument: '-target-arch-variant'` followed by missing
-Foundation types or `STNNodeID` conformance errors, check
-`xcrun --toolchain XcodeDefault swift --version`. Swift 6.3 cannot read the
-macOS 27 SDK's Swift interfaces; use the matching Xcode toolchain above rather
-than changing the identity types. The package requires Swift 6.4 or newer.
+No third-party Swift package dependencies are required. [Just](https://github.com/casey/just) is optional; if installed, `just example Counter` runs the same example.
 
-Each example is a separate consumer package importing only `Stana`.
+### Use Stana in your own app
 
-- **Counter:** state, derived text, a shared command, keyboard shortcut, and menu.
-- **Text Fields:** selection, native text services, reactive read-only/enabled state, styling, and secure entry.
-- **Preferences:** reusable fields, two-way bindings, toggles, save dialog, and asynchronous file writing.
-- **Window Configuration:** reactive framed/frameless chrome, native drag regions, control exclusions, and a custom resize grip.
-- **Editable Collection:** stable observable rows, editing, reordering, removal, and scrolling. This is not a virtualized list.
+Create a SwiftPM executable package with this `Package.swift`:
 
-## The small mental model
+```swift
+// swift-tools-version: 6.4
+import PackageDescription
 
-| Input                                        | Meaning                                           |
-| -------------------------------------------- | ------------------------------------------------- |
-| `text: "Hello"`                              | Constant for this mount                           |
-| `text: name`                                 | Subscribe to a signal                             |
-| `text: name.map { "Hello, \($0)" }`          | Subscribe to derived state                        |
-| `value: name.binding`                        | Read and write committed application state        |
-| `text: name.value`                           | Capture the current value; **not** a subscription |
-| `STNIf(flag) { ... }`                        | Dispose/mount a localized branch                  |
-| `STNForEach(observableRows: rows, id: \.id)` | Preserve row/editor identity across reordering    |
+let package = Package(
+	name: "Counter",
+	platforms: [.macOS(.v14)],
+	dependencies: [
+		.package(url: "https://github.com/tuuls-dev/stana-ui.git", exact: "0.0.1")
+	],
+	targets: [
+		.executableTarget(
+			name: "CounterApp",
+			dependencies: [.product(name: "Stana", package: "stana-ui")]
+		)
+	],
+	swiftLanguageModes: [.v6]
+)
+```
 
-Properties come before children. Actions belong in properties. Ordinary Swift `if` and `for` in a builder run at mount time; use structural components for later changes.
+Save the [small example above](#a-small-example) as `Sources/CounterApp/App.swift`, then run `swift run CounterApp`. Keep the filename `App.swift` when using the `@main` entry point. This manifest pins the preview version explicitly.
 
-Preview reactive inputs are text (labels/buttons/toggles), container background and opacity, control enabled state, accessibility labels, window titles, canvas drawings, command title/enabled/checked state, and structural sources. Text-field options and window configuration also accept constant/signal/computed snapshots; unavailable options are ignored by the host. Other properties are mount-time configuration. Editable controls use bindings; environment theme/direction/text scale can change independently.
+To work against a local checkout instead, replace the URL dependency with `.package(path: "../stana-ui")`, adjusting the path to your checkout. The included examples use local package dependencies.
 
-## Architecture
+## Examples
 
-Swift owns the document, reactivity, layout, custom controls, editing state, scene, and semantic projection. A private Objective-C bridge uses AppKit only for host integration, IME, accessibility, menus, and system dialogs. There are no AppKit content controls, no SwiftUI, and no external binary dependencies. Rendering uses Core Graphics and Core Text behind portable service contracts.
+Each example is an independent consumer package using the public API. Run one with `swift run --package-path Examples/<Name>` or `just example <Name>`.
 
-See [text fields](Sources/Stana/Documentation.docc/TextFields.md), [window configuration](Sources/Stana/Documentation.docc/WindowConfiguration.md), [architecture](Docs/Architecture.md), [API decisions](Docs/Decisions/0002-public-api-contract.md), and the original [design specification](ramblings/design_thoughts.md).
+| Example                                             | Demonstrates                                                       |
+| --------------------------------------------------- | ------------------------------------------------------------------ |
+| [Counter](Examples/Counter)                         | Signals, retained label updates, and a shared button/menu command. |
+| [Preferences](Examples/Preferences)                 | Editable settings and a reusable labelled-field component.         |
+| [EditableCollection](Examples/EditableCollection)   | Keyed observable rows and editing state during collection updates. |
+| [WindowConfiguration](Examples/WindowConfiguration) | Window settings, native relationships, and chrome.                 |
+| [TextFields](Examples/TextFields)                   | Styled single-line fields and text-service configuration.          |
 
-## Test and package
+### Text-field rendering
+
+![Two Stana text fields with custom borders, opposite text alignment, and mixed English, Arabic, and emoji content.](Docs/Verification/Screenshots/TextFields.png)
+
+An offscreen rendering capture; see [text-field verification](Docs/Verification/TextFields.md) for its scope and pending manual checks.
+
+## Documentation
+
+- [Getting started](Sources/Stana/Documentation.docc/GettingStarted.md)
+- [State and bindings](Sources/Stana/Documentation.docc/StateAndBindings.md)
+- [Custom components and lifetimes](Sources/Stana/Documentation.docc/CustomComponents.md)
+- [Text fields](Sources/Stana/Documentation.docc/TextFields.md)
+- [Desktop applications](Sources/Stana/Documentation.docc/DesktopApplications.md)
+- [Window configuration](Sources/Stana/Documentation.docc/WindowConfiguration.md)
+- [Architecture](Docs/Architecture.md)
+- [Platform support and qualification](Docs/PlatformSupport.md)
+
+The [DocC catalog](Sources/Stana/Documentation.docc) lives alongside the public API in `Sources/Stana`.
+
+## Current boundaries
+
+Scrolling mounts all children; there is no virtualized list. Multiline editing, selectable display text, grids, SVG interpretation, and an animation framework are not included. Rendering is currently CPU raster on the UI executor.
+
+Native services depend on the OS and device configuration. User-session VoiceOver and IME qualification remains separate from automated tests. Consult the [verification results](Docs/Verification/Results.md) and [platform support](Docs/PlatformSupport.md) before relying on a feature.
+
+## Development
+
+Run these commands from the repository root:
+
+| Command                             | Purpose                                                                                                                     |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `just`                              | List available recipes.                                                                                                     |
+| `just build`                        | Build the library in debug mode.                                                                                            |
+| `just test`                         | Run tests with Swift and native warnings treated as errors.                                                                 |
+| `just check`                        | Run formatting, boundary checks, tests, API fixtures, runtime probes, all example builds, and a release build sequentially. |
+| `just format` / `just check-format` | Format Swift files or check without edits.                                                                                  |
+| `just test-gui`                     | Run opt-in native GUI tests in a logged-in macOS session.                                                                   |
+| `just benchmark`                    | Run the release-mode headless benchmark and print JSON.                                                                     |
+
+Without Just, use `swift build`, `swift test -Xswiftc -warnings-as-errors -Xcc -Werror`, and the scripts described in [CONTRIBUTING.md](CONTRIBUTING.md).
+
+To assemble an unsigned example application:
 
 ```sh
-swift test
-Scripts/check-api-fixtures.sh
-Scripts/check-runtime-faults.sh
-Scripts/check-boundaries.sh
-Scripts/package-macos-app.sh Examples/Counter CounterApp dev.stana.counter
+Scripts/package-macos-app.sh Examples/Counter CounterApp dev.example.counter
 ```
 
-Consumers can depend on `StanaTesting` and drive `STNTestHost` without creating a native application. The packaging script creates an unsigned `.app` in `dist/`; signing and notarization are application-owned.
+The script requires Python 3 and creates `dist/CounterApp.app`. Signing and notarization are application-owned steps.
 
-For native host/raster verification in a logged-in macOS session, run `just test-gui` or `STANA_GUI_TESTS=1 swift test`. GUI tests require window-server access; a filesystem sandbox may expose only a non-drawable virtual display. They are opt-in and are not enabled by `just check`.
+## Help and contributing
+
+Report bugs or propose improvements through [GitHub Issues](https://github.com/tuuls-dev/stana-ui/issues). Include a minimal reproduction, your macOS and Swift versions, and any relevant diagnostics.
+
+Before contributing, read [CONTRIBUTING.md](CONTRIBUTING.md) for API fixtures, formatting conventions, verification, and release instructions.
+
+## License
+
+No license file is currently included in this repository.
