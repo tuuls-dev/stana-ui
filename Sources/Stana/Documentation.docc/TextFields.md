@@ -1,6 +1,6 @@
 # Text fields
 
-Use ``STNTextField`` for retained, custom-drawn single-line text editing. The writable string binding contains committed text, never an in-progress IME composition.
+Use `STNTextField` for retained, custom-drawn single-line text editing. The writable string binding contains committed text, never an in-progress IME composition.
 
 ## Configure a field
 
@@ -28,7 +28,7 @@ Options also configure logical leading/center/trailing alignment, text and place
 
 Fields support insertion clicks, Shift-click extension, drag selection and edge autoscrolling, double-click word selection, and triple-click select-all. Keyboard editing includes word and line movement/deletion, selection extension, clipboard commands, and grouped undo/redo. Selection and deletion preserve extended grapheme clusters.
 
-Use `onEditorMount` to retain an ``STNTextFieldHandle``. It supports `requestFocus()`, `resignFocus()`, `selection()`, `setSelection(_:)`, `selectAll()`, and `resolution()`. Calls throw after disposal. Selection positions use UTF-8 offsets and the current editor revision, not native UTF-16 ranges. Preserve anchor/head order for backward selections. Obtain fresh positions after edits or composition changes; stale positions are rejected without changing composition. A valid explicit selection cancels marked text.
+Use `onEditorMount` to retain an `STNTextFieldHandle`. It supports `requestFocus()`, `resignFocus()`, `selection()`, `setSelection(_:)`, `selectAll()`, and `resolution()`. Calls throw after disposal. Selection positions use UTF-8 offsets and the current editor revision, not native UTF-16 ranges. Preserve anchor/head order for backward selections. Obtain fresh positions after edits or composition changes; stale positions are rejected without changing composition. A valid explicit selection cancels marked text.
 
 `onChange` reports committed user edits, undo/redo, and accepted service replacements, but not external binding updates or marked text. `onFocusChange` and `onSelectionChange` suppress duplicate state. Callbacks run after publication and stop after disposal. Changes within a transaction are coalesced to its final published state. Application callbacks may update state.
 

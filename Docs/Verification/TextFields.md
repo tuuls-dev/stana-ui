@@ -17,14 +17,14 @@ Environment: macOS 27.0.1, Apple Silicon, Swift 6.4, macOS 27 SDK; deployment ta
 
 These checks have **not** been performed by a human in this change. Automated adapter tests do not establish interoperability.
 
-| Check | Status |
-| --- | --- |
-| Japanese/Chinese/Korean IME candidate selection, replacement, mouse interaction, and focus changes | Pending |
+| Check                                                                                                                                 | Status  |
+| ------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| Japanese/Chinese/Korean IME candidate selection, replacement, mouse interaction, and focus changes                                    | Pending |
 | Actual spelling/grammar suggestions, automatic correction, smart quotes/dashes, text replacement, and completion in different locales | Pending |
-| Dictation, dead keys, and emoji picker in a normal user session | Pending |
-| Services and Services-based Writing Tools on eligible devices/OS configurations | Pending |
-| VoiceOver reading, selection, editing, secure entry, and read-only state | Pending |
-| Native keyboard behavior across mixed RTL/LTR boundaries and minimum-macOS coverage | Pending |
+| Dictation, dead keys, and emoji picker in a normal user session                                                                       | Pending |
+| Services and Services-based Writing Tools on eligible devices/OS configurations                                                       | Pending |
+| VoiceOver reading, selection, editing, secure entry, and read-only state                                                              | Pending |
+| Native keyboard behavior across mixed RTL/LTR boundaries and minimum-macOS coverage                                                   | Pending |
 
 ## Deliberate boundaries
 
