@@ -4,7 +4,7 @@ jobs:
   verify:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Verify required toolchain
         run: swift --version | grep 'Swift version 6.4'
       - name: Swift formatting
@@ -22,5 +22,6 @@ jobs:
           swift build --package-path Examples/Counter -Xswiftc -warnings-as-errors
           swift build --package-path Examples/Preferences -Xswiftc -warnings-as-errors
           swift build --package-path Examples/EditableCollection -Xswiftc -warnings-as-errors
+          swift build --package-path Examples/TextFields -Xswiftc -warnings-as-errors
       - name: Release build
         run: swift build -c release -Xswiftc -warnings-as-errors

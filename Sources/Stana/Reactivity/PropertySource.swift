@@ -49,6 +49,7 @@ import StanaPrimitives
 	var accessibility = STNAccessibilityProperties()
 	var onMount: (@MainActor (STNNodeHandle) -> Void)?
 	var onActivate: (@MainActor () -> Void)?
+	var onSubmit: (@MainActor () -> Void)?
 	var onPointerDown: (@MainActor (STNPointerEvent) -> Void)?
 	var onPointerMove: (@MainActor (STNPointerEvent) -> Void)?
 	var onPointerUp: (@MainActor (STNPointerEvent) -> Void)?
@@ -70,6 +71,7 @@ import StanaPrimitives
 		node.style.heading = accessibility.heading
 		node.style.semanticGroup = accessibility.group
 		node.onActivate = onActivate
+		node.onSubmit = onSubmit
 		node.onPointerDown = onPointerDown
 		node.onPointerMove = onPointerMove
 		node.onPointerUp = onPointerUp
@@ -79,7 +81,10 @@ import StanaPrimitives
 		node.onPointerUpCapture = onPointerUpCapture
 		configure(node)
 		text.install(in: context, node: node, dirty: .all) { $0.text = $1 }
-		background.install(in: context, node: node, dirty: .paint) { $0.style.background = $1 }
+		// Text fields own their background through their reactive Options snapshot.
+		if kind != .textField {
+			background.install(in: context, node: node, dirty: .paint) { $0.style.background = $1 }
+		}
 		opacity.install(in: context, node: node, dirty: .paint) { n, value in
 			precondition(value.isFinite && (0...1).contains(value))
 			n.style.opacity = value

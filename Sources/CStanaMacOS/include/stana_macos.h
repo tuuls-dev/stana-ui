@@ -16,6 +16,10 @@ void stn_window_title(stn_window, stn_utf8);
 void stn_window_destroy(stn_window);
 void stn_window_focus_text(stn_window, bool);
 void stn_window_discard_marked(stn_window);
+void stn_window_text_options(stn_window, uint64_t, bool, bool, bool, const int32_t *, size_t);
+bool stn_text_service_enabled(int32_t, int32_t);
+double stn_caret_interval(bool);
+size_t stn_text_selection_rects(stn_utf8, double, double, uint64_t, uint64_t, stn_rect *, size_t);
 void stn_window_text_state(stn_window, stn_utf8, uint64_t, uint64_t, uint64_t, uint64_t, stn_rect, const double *, size_t, uint64_t, bool);
 void stn_window_publish_semantics(stn_window, uint64_t, const stn_semantic_node *, size_t);
 void stn_window_semantic_text(stn_window, uint64_t, stn_utf8, uint64_t, uint64_t, stn_rect, const double *, size_t, uint64_t, bool);
@@ -47,6 +51,9 @@ void stn_menu_update(uint64_t, stn_utf8, bool, bool);
 // Path strings are borrowed UTF-8; no native UI pointer crosses the ABI.
 void stn_file_dialog(stn_window, bool, stn_utf8, void *, stn_dialog_callback);
 void stn_alert(stn_window, stn_utf8, stn_utf8, void *, stn_dialog_callback);
+// Test-only diagnostics.
+bool stn_window_test_text_action(stn_window, stn_utf8, bool);
+bool stn_window_test_checked_replace(stn_window, stn_utf8, uint64_t, uint64_t, uint64_t, uint64_t);
 // Test-only diagnostics. No user text is returned.
 size_t stn_window_semantic_count(stn_window);
 uint64_t stn_window_semantic_revision(stn_window);

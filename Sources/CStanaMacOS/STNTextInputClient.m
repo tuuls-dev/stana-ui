@@ -20,23 +20,29 @@ void stn_window_text_state(stn_window p, stn_utf8 text, uint64_t start, uint64_t
     STNContentView *view=STNHost(p).view;
     view.textSnapshot=STNMakeTextSnapshot(text,start,length,marked,markedLength,bounds,offsets,count,revision,secure);
     [view.inputContext invalidateCharacterCoordinates];
+    [view refreshTextServices];
 }
 
 @implementation STNContentView (TextInput)
 - (void)insertText:(id)value replacementRange:(NSRange)range {
     NSString *text=[value isKindOfClass:NSAttributedString.class] ? [value string] : value;
+    NSRange target=range.location==NSNotFound ? (self.hasMarkedText ? self.markedRange : self.selectedRange) : range;
+    NSString *normalized=[[text stringByReplacingOccurrencesOfString:@"\r\n" withString:@" "] stringByReplacingOccurrencesOfString:@"\n" withString:@" "];
+    normalized=[normalized stringByReplacingOccurrencesOfString:@"\r" withString:@" "];
+    self.textUserInsertion=YES; self.insertedRange=NSMakeRange(target.location,normalized.length);
     [self.host textRequest:1 text:text replacement:range selected:NSMakeRange(0,0)];
 }
 - (void)setMarkedText:(id)value selectedRange:(NSRange)selected replacementRange:(NSRange)range {
     NSString *text=[value isKindOfClass:NSAttributedString.class] ? [value string] : value;
     [self.host textRequest:2 text:text replacement:range selected:selected];
 }
-- (void)unmarkText { [self.host textRequest:3 text:@"" replacement:NSMakeRange(NSNotFound,0) selected:NSMakeRange(0,0)]; }
+- (void)unmarkText { if (self.hasMarkedText) { self.textUserInsertion=YES; self.insertedRange=self.markedRange; } [self.host textRequest:3 text:@"" replacement:NSMakeRange(NSNotFound,0) selected:NSMakeRange(0,0)]; }
 - (BOOL)hasMarkedText { return self.textSnapshot.marked.location != NSNotFound && self.textSnapshot != nil; }
 - (NSRange)markedRange { return self.textSnapshot ? self.textSnapshot.marked : NSMakeRange(NSNotFound,0); }
 - (NSRange)selectedRange { return self.textSnapshot ? self.textSnapshot.selection : NSMakeRange(0,0); }
 - (NSArray<NSAttributedStringKey> *)validAttributesForMarkedText { return @[]; }
 - (NSAttributedString *)attributedSubstringForProposedRange:(NSRange)range actualRange:(NSRangePointer)actual {
+    if (self.textSnapshot.secure) return nil;
     NSString *text=self.textSnapshot.text ?: @""; if (range.location>text.length) return nil;
     NSRange valid=NSIntersectionRange(range,NSMakeRange(0,text.length)); if (actual) *actual=valid;
     return [[NSAttributedString alloc] initWithString:[text substringWithRange:valid]];
@@ -53,5 +59,5 @@ void stn_window_text_state(stn_window p, stn_utf8 text, uint64_t start, uint64_t
     for (NSUInteger i=0;i<offsets.count;i++) { double d=fabs([offsets[i] doubleValue]-x); if (d<distance) { distance=d; best=i; } }
     return best;
 }
-- (void)doCommandBySelector:(SEL)selector { [self.host textRequest:4 text:NSStringFromSelector(selector) replacement:NSMakeRange(NSNotFound,0) selected:NSMakeRange(0,0)]; }
+- (void)doCommandBySelector:(SEL)selector { if (selector==@selector(complete:)) { [self complete:nil]; return; } [self.host textRequest:4 text:NSStringFromSelector(selector) replacement:NSMakeRange(NSNotFound,0) selected:NSMakeRange(0,0)]; }
 @end

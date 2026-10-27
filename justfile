@@ -41,18 +41,18 @@ check-api:
 check-runtime:
     Scripts/check-runtime-faults.sh
 
-# Build all four consumer examples with Swift warnings as errors.
+# Build all five consumer examples with Swift warnings as errors.
 build-examples:
-    for example in Counter Preferences EditableCollection WindowConfiguration; do \
+    for example in Counter Preferences EditableCollection WindowConfiguration TextFields; do \
         swift build --package-path "Examples/$example" -Xswiftc -warnings-as-errors; \
     done
 
-# Run an example: Counter, Preferences, EditableCollection, or WindowConfiguration.
+# Run an example: Counter, Preferences, EditableCollection, WindowConfiguration, or TextFields.
 example example="Counter":
     @example="${1#example=}"; \
         case "$example" in \
-            Counter|Preferences|EditableCollection|WindowConfiguration) ;; \
-            *) printf 'Unknown example: %s\nUsage: just example [Counter|Preferences|EditableCollection|WindowConfiguration]\n' "$example" >&2; exit 1 ;; \
+            Counter|Preferences|EditableCollection|WindowConfiguration|TextFields) ;; \
+            *) printf 'Unknown example: %s\nUsage: just example [Counter|Preferences|EditableCollection|WindowConfiguration|TextFields]\n' "$example" >&2; exit 1 ;; \
         esac; \
         swift run --package-path "Examples/$example"
 

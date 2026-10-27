@@ -4,6 +4,10 @@ import StanaPrimitives
 package struct EditingPaint {
 	package let text: String
 	package let offset: Double
+	package let hasSelection: Bool
+	package let caretVisible: Bool
+	package let selectionRects: [STNRect]
+	package let annotations: [STNRect]
 	package let selectionStart: Double
 	package let selectionEnd: Double
 	package let markedStart: Double?
@@ -12,11 +16,19 @@ package struct EditingPaint {
 	package init(
 		text: String,
 		offset: Double = 0,
+		caretVisible: Bool = true,
+		hasSelection: Bool? = nil,
+		selectionRects: [STNRect] = [],
+		annotations: [STNRect] = [],
 		selectionStart: Double,
 		selectionEnd: Double,
 		markedStart: Double? = nil,
 		markedEnd: Double? = nil
 	) {
+		self.hasSelection = hasSelection ?? (selectionStart != selectionEnd)
+		self.caretVisible = caretVisible
+		self.selectionRects = selectionRects
+		self.annotations = annotations
 		self.text = text
 		self.offset = offset
 		self.selectionStart = selectionStart
@@ -72,7 +84,7 @@ package struct EditingPaint {
 				local.append(.fill(viewport, color(document.surfaceBackground), radius: 0))
 			}
 
-			if node.kind == .button || node.kind == .textField {
+			if node.kind == .button {
 				local.append(
 					.fill(
 						bounds,
@@ -120,19 +132,25 @@ package struct EditingPaint {
 				let value = edit?.text ?? node.text
 				let shown = style.secure ? String(repeating: "•", count: value.utf16.count) : value
 				local.append(.pushClip(inner))
-				if document.focused == node.id, let edit, edit.selectionEnd > edit.selectionStart {
-					local.append(
-						.fill(
-							.init(
-								x: inner.minX + edit.selectionStart - edit.offset,
-								y: inner.minY,
-								width: edit.selectionEnd - edit.selectionStart,
-								height: inner.size.height
-							),
-							color(.accent),
-							radius: 0
+				if document.focused == node.id, let edit, edit.hasSelection {
+					let rects =
+						edit.selectionRects.isEmpty
+						? [STNRect(x: edit.selectionStart, width: edit.selectionEnd - edit.selectionStart)]
+						: edit.selectionRects
+					for rect in rects {
+						local.append(
+							.fill(
+								.init(
+									x: inner.minX + rect.minX - edit.offset,
+									y: inner.minY,
+									width: rect.size.width,
+									height: inner.size.height
+								),
+								color(style.selectionColor),
+								radius: 0
+							)
 						)
-					)
+					}
 				}
 
 				var textBounds = inner
@@ -143,12 +161,12 @@ package struct EditingPaint {
 						shown.isEmpty ? node.placeholder : shown,
 						textBounds,
 						font,
-						color(shown.isEmpty ? .secondaryText : style.foreground),
+						color(shown.isEmpty ? style.placeholderColor : style.foreground),
 						wraps: false
 					)
 				)
 				if document.focused == node.id, let edit {
-					if edit.selectionStart == edit.selectionEnd {
+					if !edit.hasSelection && edit.caretVisible {
 						local.append(
 							.fill(
 								.init(
@@ -157,7 +175,7 @@ package struct EditingPaint {
 									width: 1,
 									height: max(0, inner.size.height - 2)
 								),
-								color(.text),
+								color(style.caretColor),
 								radius: 0
 							)
 						)
@@ -177,6 +195,21 @@ package struct EditingPaint {
 							)
 						)
 					}
+				}
+
+				for annotation in edit?.annotations ?? [] {
+					local.append(
+						.fill(
+							.init(
+								x: inner.minX + annotation.minX - (edit?.offset ?? 0),
+								y: inner.maxY - 2,
+								width: annotation.size.width,
+								height: 1
+							),
+							color(.init(red: 0.85, green: 0.15, blue: 0.15)),
+							radius: 0
+						)
+					)
 				}
 
 				local.append(.popClip)

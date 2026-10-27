@@ -12,6 +12,7 @@ A component describes one mount. Signals update the properties of retained nodes
 
 - <doc:GettingStarted>
 - <doc:StateAndBindings>
+- <doc:TextFields>
 - <doc:CustomComponents>
 - <doc:DesktopApplications>
 - <doc:WindowConfiguration>

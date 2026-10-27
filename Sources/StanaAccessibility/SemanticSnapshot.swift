@@ -23,6 +23,7 @@ public struct STNSemanticNode: Equatable, Sendable {
 	public let isFocused: Bool
 	public let isOffscreen: Bool
 	public let isSecure: Bool
+	public let isReadOnly: Bool
 	public let headingLevel: Int?
 }
 
@@ -87,6 +88,7 @@ public struct STNSemanticNode: Equatable, Sendable {
 						isFocused: document.focused == node.id,
 						isOffscreen: !node.bounds.intersects(clip),
 						isSecure: node.style.secure,
+						isReadOnly: node.style.isReadOnly,
 						headingLevel: node.style.heading
 					)
 				)

@@ -20,6 +20,36 @@ import StanaPrimitives
 	package var onChange: ((String) -> Void)?
 	package var onPresentationChange: (() -> Void)?
 	package var isSecure = false
+	package enum EditGroup { case typing, backwardDelete, forwardDelete }
+	private var editGroup: EditGroup?
+	package var canUndo: Bool { !undoStack.isEmpty }
+	package var canRedo: Bool { !redoStack.isEmpty }
+	package var wordRange: (String, Int) -> NSRange = TextBoundaries.wordRange
+
+	package func breakUndoGroup() {
+		editGroup = nil
+	}
+
+	package func currentSelection() throws -> STNTextSelection {
+		let anchor = selectionAnchor ?? selection.location
+		let head = selectionHead ?? NSMaxRange(selection)
+		return try .init(
+			anchor: .init(utf8Offset: TextIndices.utf8(utf16: anchor, in: text), revision: revision),
+			head: .init(utf8Offset: TextIndices.utf8(utf16: head, in: text), revision: revision)
+		)
+	}
+
+	package func select(anchor: Int, head: Int) throws {
+		try applySelection(NSRange(location: min(anchor, head), length: abs(head - anchor)), anchor: anchor, head: head)
+	}
+
+	package var head: Int {
+		selectionHead ?? NSMaxRange(selection)
+	}
+
+	package var anchor: Int {
+		selectionAnchor ?? selection.location
+	}
 	package let maxUTF8Bytes = 1_048_576
 
 	package init(_ text: String) {
@@ -56,7 +86,7 @@ import StanaPrimitives
 		undoStack.count
 	}
 
-	package func replace(_ range: NSRange? = nil, with replacement: String) throws {
+	package func replace(_ range: NSRange? = nil, with replacement: String, group: EditGroup? = nil) throws {
 		let target = range ?? compositionRange ?? selection
 		let indices = try TextIndices.range(utf16: target, in: text)
 		let normalized = replacement.replacingOccurrences(of: "\r\n", with: " ")
@@ -70,7 +100,23 @@ import StanaPrimitives
 			throw STNError.invalidTextRange
 		}
 
-		undoStack.append(.init(text: text, selection: selection))
+		guard candidate != text else {
+			selection = NSRange(
+				location: TextBoundaries.ceiling(target.location + normalized.utf16.count, in: text),
+				length: 0
+			)
+			selectionAnchor = nil
+			selectionHead = nil
+			breakUndoGroup()
+			cancelComposition()
+			return
+		}
+
+		if group == nil || group != editGroup {
+			undoStack.append(.init(text: text, selection: selection))
+		}
+
+		editGroup = group
 		if undoStack.count > 200 {
 			undoStack.removeFirst()
 		}
@@ -78,7 +124,10 @@ import StanaPrimitives
 		redoStack.removeAll()
 		text = candidate
 		nextRevision(&revision)
-		selection = NSRange(location: target.location + normalized.utf16.count, length: 0)
+		selection = NSRange(
+			location: TextBoundaries.ceiling(target.location + normalized.utf16.count, in: text),
+			length: 0
+		)
 		selectionAnchor = nil
 		selectionHead = nil
 		markedText = nil
@@ -88,6 +137,7 @@ import StanaPrimitives
 	}
 
 	package func setMarked(_ value: String, selected: NSRange, replacement: NSRange?) throws {
+		breakUndoGroup()
 		let target = compositionRange ?? replacement ?? selection
 		_ = try TextIndices.range(utf16: target, in: text)
 		_ = try TextIndices.range(utf16: selected, in: value)
@@ -128,13 +178,14 @@ import StanaPrimitives
 			return
 		}
 
+		breakUndoGroup()
 		cancelComposition()
 		text = value
 		nextRevision(&revision)
 		undoStack.removeAll()
 		redoStack.removeAll()
 		let limit = min(selection.location, text.utf16.count)
-		selection = NSRange(location: limit, length: 0)
+		selection = NSRange(location: TextBoundaries.snap(limit, in: text), length: 0)
 		selectionAnchor = nil
 		selectionHead = nil
 		if (try? TextIndices.range(utf16: selection, in: text)) == nil {
@@ -145,14 +196,27 @@ import StanaPrimitives
 	}
 
 	package func select(_ range: NSRange) throws {
-		_ = try TextIndices.range(utf16: range, in: displayText)
+		try applySelection(range, anchor: nil, head: nil)
+	}
+
+	private func applySelection(_ range: NSRange, anchor: Int?, head: Int?) throws {
+		_ = try TextIndices.range(utf16: range, in: text)
+		guard TextBoundaries.snap(range.location, in: text) == range.location,
+			TextBoundaries.snap(NSMaxRange(range), in: text) == NSMaxRange(range)
+		else {
+			throw STNError.invalidTextRange
+		}
+
+		breakUndoGroup()
 		if markedText != nil {
-			cancelComposition()
+			nextRevision(&revision)
+			markedText = nil
+			compositionRange = nil
 		}
 
 		selection = range
-		selectionAnchor = nil
-		selectionHead = nil
+		selectionAnchor = anchor
+		selectionHead = head
 		onPresentationChange?()
 	}
 
@@ -163,10 +227,11 @@ import StanaPrimitives
 
 		let a = try TextIndices.utf16(utf8: value.anchor.utf8Offset, in: text)
 		let b = try TextIndices.utf16(utf8: value.head.utf8Offset, in: text)
-		try select(NSRange(location: min(a, b), length: abs(b - a)))
+		try select(anchor: a, head: b)
 	}
 
 	package func undo() {
+		breakUndoGroup()
 		guard let previous = undoStack.popLast() else {
 			return
 		}
@@ -183,6 +248,7 @@ import StanaPrimitives
 	}
 
 	package func redo() {
+		breakUndoGroup()
 		guard let next = redoStack.popLast() else {
 			return
 		}
@@ -199,6 +265,7 @@ import StanaPrimitives
 	}
 
 	package func move(_ direction: Int, extending: Bool = false, word: Bool = false, edge: Bool = false) {
+		breakUndoGroup()
 		if markedText != nil {
 			try? commitComposition()
 		}
@@ -225,16 +292,30 @@ import StanaPrimitives
 		} else if direction < 0, target > text.startIndex {
 			target = text.index(before: target)
 			if word {
-				while target > text.startIndex, !text[text.index(before: target)].isWhitespace {
+				while target > text.startIndex, text[target].isWhitespace {
 					target = text.index(before: target)
+				}
+
+				let offset = text.utf16.distance(from: text.utf16.startIndex, to: target)
+				let range = wordRange(text, offset)
+				if let indices = try? TextIndices.range(utf16: range, in: text) {
+					target = indices.lowerBound
 				}
 			}
 		} else if direction > 0, target < text.endIndex {
-			target = text.index(after: target)
 			if word {
-				while target < text.endIndex, !text[target].isWhitespace {
+				let range = wordRange(text, utf16)
+				if let indices = try? TextIndices.range(utf16: range, in: text), indices.upperBound > target {
+					target = indices.upperBound
+				} else {
 					target = text.index(after: target)
 				}
+
+				while target < text.endIndex, text[target].isWhitespace {
+					target = text.index(after: target)
+				}
+			} else {
+				target = text.index(after: target)
 			}
 		}
 
@@ -253,15 +334,26 @@ import StanaPrimitives
 		onPresentationChange?()
 	}
 
-	package func delete(backward: Bool, word: Bool = false) throws {
+	package func delete(backward: Bool, word: Bool = false, edge: Bool = false) throws {
+		if markedText != nil {
+			try commitComposition()
+		}
+
 		if selection.length > 0 {
 			try replace(with: "")
 			return
 		}
 
 		let original = selection.location
-		move(backward ? -1 : 1, word: word)
+		let previousGroup = editGroup
+		move(backward ? -1 : 1, word: word, edge: edge)
+		editGroup = previousGroup
 		let next = selection.location
-		try replace(NSRange(location: min(original, next), length: abs(original - next)), with: "")
+		selection = NSRange(location: original, length: 0)
+		try replace(
+			NSRange(location: min(original, next), length: abs(original - next)),
+			with: "",
+			group: word || edge ? nil : (backward ? .backwardDelete : .forwardDelete)
+		)
 	}
 }

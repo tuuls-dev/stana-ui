@@ -77,25 +77,31 @@ import StanaText
 		session.document.focusNext(backward: backward)
 	}
 
-	public func click(at point: STNPoint) {
-		session.document.pointer(.down, at: point)
-		session.document.pointer(.up, at: point)
+	public func click(at point: STNPoint, shift: Bool = false, clickCount: Int = 1, button: Int = 0) {
+		_ = session.pointer(0, at: point, shift: shift, clickCount: clickCount, button: button)
+		_ = session.pointer(2, at: point, shift: shift, clickCount: clickCount, button: button)
 	}
 
-	public func pointerDown(at point: STNPoint) {
-		session.document.pointer(.down, at: point)
+	public func pointerDown(at point: STNPoint, shift: Bool = false, clickCount: Int = 1, button: Int = 0) {
+		_ = session.pointer(0, at: point, shift: shift, clickCount: clickCount, button: button)
 	}
 
 	public func pointerMove(to point: STNPoint) {
-		session.document.pointer(.move, at: point)
+		_ = session.pointer(1, at: point)
 	}
 
 	public func pointerUp(at point: STNPoint) {
-		session.document.pointer(.up, at: point)
+		_ = session.pointer(2, at: point)
 	}
 
 	public func cancelPointer() {
-		session.document.pointer(.cancel, at: .zero)
+		_ = session.pointer(4, at: .zero)
+	}
+
+	/// Advances caret blinking and edge-drag autoscrolling without wall-clock waits.
+	public func advanceEditorTime(by seconds: Double) {
+		precondition(seconds.isFinite && seconds >= 0)
+		session.tickEditors(by: seconds)
 	}
 
 	public func resize(to size: STNSize) {

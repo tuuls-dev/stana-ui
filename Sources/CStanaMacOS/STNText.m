@@ -34,6 +34,46 @@ void stn_text_offsets(stn_utf8 text, double size, double weight, double *offsets
 }
 uint64_t stn_text_index(stn_utf8 text, double size, double weight, double x) {
     NSAttributedString *s=STNAttributed(text,size,weight); CTLineRef line=CTLineCreateWithAttributedString((__bridge CFAttributedStringRef)s);
-    CFIndex index=CTLineGetStringIndexForPosition(line,CGPointMake(x,0)); CFRelease(line);
-    return index==kCFNotFound ? s.length : MAX(0,index);
+    CFIndex index=CTLineGetStringIndexForPosition(line,CGPointMake(x,0));
+    if (index==kCFNotFound) {
+        double distance=DBL_MAX;
+        for (NSUInteger i=0;i<=s.length;i++) {
+            double candidate=CTLineGetOffsetForStringIndex(line,i,NULL), d=fabs(x-candidate);
+            if (d<distance) { distance=d; index=i; }
+        }
+    }
+    CFRelease(line); return MAX(0,index);
+}
+
+// Selection geometry is split at shaped runs, so a logical selection through
+// mixed-direction text does not highlight unrelated visual glyphs.
+size_t stn_text_selection_rects(stn_utf8 text, double size, double weight, uint64_t start, uint64_t length, stn_rect *rects, size_t capacity) {
+    NSAttributedString *s=STNAttributed(text,size,weight);
+    if (start>s.length || length>s.length-start || !length) return 0;
+    CTLineRef line=CTLineCreateWithAttributedString((__bridge CFAttributedStringRef)s);
+    CFArrayRef runs=CTLineGetGlyphRuns(line); size_t count=0;
+    NSRange selection=NSMakeRange(start,length);
+    for (CFIndex i=0;i<CFArrayGetCount(runs);i++) {
+        CTRunRef run=(CTRunRef)CFArrayGetValueAtIndex(runs,i); CFRange runRange=CTRunGetStringRange(run);
+        NSRange intersection=NSIntersectionRange(selection,NSMakeRange(runRange.location,runRange.length));
+        if (!intersection.length) continue;
+        CFIndex glyphCount=CTRunGetGlyphCount(run);
+        NSMutableIndexSet *boundaries=[NSMutableIndexSet indexSetWithIndex:runRange.location+runRange.length];
+        CFIndex *indices=calloc(MAX(1,glyphCount),sizeof(CFIndex));
+        CTRunGetStringIndices(run,CFRangeMake(0,glyphCount),indices);
+        for (CFIndex glyph=0;glyph<glyphCount;glyph++) [boundaries addIndex:indices[glyph]];
+        double left=DBL_MAX,right=-DBL_MAX;
+        for (CFIndex glyph=0;glyph<glyphCount;glyph++) {
+            CFIndex stringIndex=indices[glyph];
+            CFIndex next=[boundaries indexGreaterThanIndex:stringIndex];
+            if (!NSIntersectionRange(intersection,NSMakeRange(stringIndex,next-stringIndex)).length) continue;
+            CGPoint point; CGSize advance; CTRunGetPositions(run,CFRangeMake(glyph,1),&point); CTRunGetAdvances(run,CFRangeMake(glyph,1),&advance);
+            left=MIN(left,MIN(point.x,point.x+advance.width)); right=MAX(right,MAX(point.x,point.x+advance.width));
+        }
+        free(indices);
+        if (left<=right) {
+            if (count<capacity) rects[count]=(stn_rect){left,0,MAX(0,right-left),size*1.3}; count++;
+        }
+    }
+    CFRelease(line); return count;
 }

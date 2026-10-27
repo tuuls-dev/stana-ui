@@ -39,6 +39,10 @@ package struct NodeStyle: Equatable, Sendable {
 	package var inert = false
 	package var flex: Double = 0
 	package var secure = false
+	package var isReadOnly = false
+	package var placeholderColor = STNColor.secondaryText
+	package var selectionColor = STNColor.accent
+	package var caretColor = STNColor.text
 	package var accessibilityLabel: String?
 	package var accessibilityHint: String?
 	package var heading: Int?
@@ -166,6 +170,7 @@ public struct STNNodeSnapshot: Sendable, Equatable {
 	package var ensureGeometry: (() -> Void)?
 	package var onFocusChanged: ((STNNodeID?) -> Void)?
 	package var onDisposed: ((STNNodeID) -> Void)?
+	package var onDefaultPointer: ((PointerPhase, NodeRecord, STNPointerEvent) -> Void)?
 	package var onEditingFocusLoss: ((STNNodeID) -> Void)?
 	package var onDiagnostic: ((String) -> Void)?
 	package var dispatchSnapshots: [STNNodeSnapshot]?

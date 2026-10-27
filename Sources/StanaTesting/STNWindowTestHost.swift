@@ -67,11 +67,11 @@ import StanaText
 	}
 
 	@discardableResult public func pointerDown(at point: STNPoint) -> Int32 {
-		recorded.onPointer?(0, point) ?? 0
+		recorded.onPointer?(0, point, false, 1, 0) ?? 0
 	}
 
 	public func pointerUp(at point: STNPoint) {
-		_ = recorded.onPointer?(2, point)
+		_ = recorded.onPointer?(2, point, false, 1, 0)
 	}
 
 	public func focus(_ id: STNNodeID) throws {
@@ -184,7 +184,7 @@ import StanaText
 	var onEvent: ((PlatformEvent) -> Void)?
 	var onDraw: (() -> Void)?
 	var onState: ((STNWindowState) -> Void)?
-	var onPointer: ((Int, STNPoint) -> Int32)?
+	var onPointer: ((Int, STNPoint, Bool, Int, Int) -> Int32)?
 	var shouldClose: (() -> Bool)?
 	var onIdle: (() -> Void)?
 	var onCommand: ((UInt64) -> Void)?

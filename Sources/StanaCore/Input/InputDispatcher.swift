@@ -7,6 +7,9 @@ public enum STNEventPhase: Sendable {
 @MainActor public final class STNPointerEvent {
 	public let position: STNPoint
 	public let pointerID: Int
+	public let shift: Bool
+	public let clickCount: Int
+	public let button: Int
 	public package(set) var target: STNNodeID?
 	public package(set) var currentTarget: STNNodeID?
 	public package(set) var phase = STNEventPhase.target
@@ -16,7 +19,10 @@ public enum STNEventPhase: Sendable {
 	package var capture: (() -> Void)?
 	package var release: (() -> Void)?
 
-	package init(position: STNPoint, pointerID: Int = 0) {
+	package init(position: STNPoint, pointerID: Int = 0, shift: Bool = false, clickCount: Int = 1, button: Int = 0) {
+		self.shift = shift
+		self.clickCount = clickCount
+		self.button = button
 		self.position = position
 		self.pointerID = pointerID
 	}
@@ -48,7 +54,13 @@ package enum PointerPhase {
 }
 
 extension Document {
-	@discardableResult package func pointer(_ phase: PointerPhase, at point: STNPoint) -> Int32 {
+	@discardableResult package func pointer(
+		_ phase: PointerPhase,
+		at point: STNPoint,
+		shift: Bool = false,
+		clickCount: Int = 1,
+		button: Int = 0
+	) -> Int32 {
 		let target = captured.flatMap { nodes[$0] } ?? hitTest(point)
 		guard let target else {
 			if phase == .up || phase == .cancel {
@@ -67,7 +79,7 @@ extension Document {
 			current = node.parent
 		}
 
-		let event = STNPointerEvent(position: point)
+		let event = STNPointerEvent(position: point, shift: shift, clickCount: clickCount, button: button)
 		var windowAction: Int32 = 0
 		event.target = target.id
 		event.capture = { [weak self, weak target] in self?.captured = target?.id }
@@ -117,6 +129,7 @@ extension Document {
 			}
 
 			if phase == .up || phase == .cancel {
+				onDefaultPointer?(phase, target, event)
 				let wasPressed = pressed
 				pressed = nil
 				captured = nil
@@ -158,6 +171,8 @@ extension Document {
 				}
 			default: break
 			}
+
+			onDefaultPointer?(phase, target, event)
 		}
 		return target.scope.isAlive && nodes[target.id] != nil ? windowAction : 0
 	}

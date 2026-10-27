@@ -44,6 +44,7 @@ import StanaAccessibility
 				focused: node.isFocused,
 				offscreen: node.isOffscreen,
 				secure: node.isSecure,
+				read_only: node.isReadOnly,
 				heading: Int32(node.headingLevel ?? 0)
 			)
 		}

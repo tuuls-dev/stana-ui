@@ -28,7 +28,7 @@ import StanaText
 	package var onEvent: ((PlatformEvent) -> Void)?
 	package var onDraw: (() -> Void)?
 	package var onState: ((STNWindowState) -> Void)?
-	package var onPointer: ((Int, STNPoint) -> Int32)?
+	package var onPointer: ((Int, STNPoint, Bool, Int, Int) -> Int32)?
 	package var shouldClose: (() -> Bool)?
 	package var onIdle: (() -> Void)?
 	package var state = STNWindowState()
@@ -38,7 +38,7 @@ import StanaText
 	package var isSurface = false
 	package var operationSerial: UInt64 = 0
 	package var operations: [UInt64: CheckedContinuation<Int32, any Error>] = [:]
-	package var onText: ((Int32, String, NSRange?, NSRange, UInt64) -> Void)?
+	package var onText: ((Int32, String, NSRange?, NSRange, UInt64, UInt64) -> Void)?
 	private var graphics: CoreGraphicsRenderer!
 	private var semantics: MacOSAccessibility!
 
@@ -87,7 +87,7 @@ import StanaText
 						Unmanaged<MacOSWindow>.fromOpaque(context).takeUnretainedValue().onDraw?()
 					}
 				},
-				{ context, kind, text, location, length, selected, selectedLength, revision in
+				{ context, kind, text, location, length, selected, selectedLength, revision, identity in
 					guard let context else {
 						return
 					}
@@ -102,7 +102,8 @@ import StanaText
 							text.string,
 							range,
 							NSRange(location: Int(clamping: selected), length: Int(clamping: selectedLength)),
-							revision
+							revision,
+							identity
 						)
 					}
 				}

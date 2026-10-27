@@ -43,6 +43,7 @@ static NSString *STNRole(int role) {
     dispatch_async(dispatch_get_main_queue(), ^{ [h emit:(stn_event){.kind=8,.identity=identity}]; }); return YES;
 }
 - (BOOL)isAccessibilitySelectorAllowed:(SEL)selector {
+    if (selector==@selector(setAccessibilityValue:)) return self.isAccessibilityEnabled && ![self.current[@"readOnly"] boolValue];
     if (selector==@selector(accessibilityPerformPress)) {
         NSString *role=self.current[@"role"]; return self.isAccessibilityEnabled && ([role isEqual:NSAccessibilityButtonRole] || [role isEqual:NSAccessibilityCheckBoxRole]);
     }
@@ -86,10 +87,10 @@ static NSString *STNRole(int role) {
     return NSMakeRect(screen.origin.x+r.origin.x-local.origin.x,screen.origin.y+screen.size.height-(r.origin.y-local.origin.y)-r.size.height,r.size.width,r.size.height);
 }
 - (void)setAccessibilityValue:(id)value {
-    if (!self.isAccessibilityEnabled || ![value isKindOfClass:NSString.class]) return;
+    if (!self.isAccessibilityEnabled || [self.current[@"readOnly"] boolValue] || ![value isKindOfClass:NSString.class]) return;
     NSString *text=[value copy]; __weak STNWindowHost *h=self.host; uint64_t identity=self.identity, revision=self.textSnapshot.revision;
     dispatch_async(dispatch_get_main_queue(), ^{
-        STNAccessibilityElement *current=h.semanticNodes[@(identity)]; if (!current.isAccessibilityEnabled) return;
+        STNAccessibilityElement *current=h.semanticNodes[@(identity)]; if (!current.isAccessibilityEnabled || [current.current[@"readOnly"] boolValue]) return;
         [h emit:(stn_event){.kind=9,.identity=identity}]; [h textRequest:6 text:text replacement:NSMakeRange(NSNotFound,0) selected:NSMakeRange(0,0) revision:revision];
     });
 }
@@ -122,7 +123,7 @@ void stn_window_publish_semantics(stn_window p, uint64_t revision, const stn_sem
         const stn_semantic_node *n=&nodes[i]; if (n->role==0) continue;
         STNAccessibilityElement *element=h.semanticNodes[@(n->identity)] ?: [STNAccessibilityElement new]; element.host=h; element.identity=n->identity;
         NSRect local=STNRect(n->bounds), screen=[h.window convertRectToScreen:[h.view convertRect:local toView:nil]];
-        NSMutableDictionary *d=[@{@"role":STNRole(n->role),@"label":STNUTF8(n->label),@"hint":STNUTF8(n->hint),@"value":STNUTF8(n->value),@"bounds":[NSValue valueWithRect:local],@"screenBounds":[NSValue valueWithRect:screen],@"disabled":@(n->disabled),@"focused":@(n->focused),@"offscreen":@(n->offscreen),@"secure":@(n->secure),@"rootChild":@(n->parent==rootID || n->parent==0),@"parentID":@(n->parent),@"children":[NSMutableArray array],@"order":@(i)} mutableCopy];
+        NSMutableDictionary *d=[@{@"role":STNRole(n->role),@"label":STNUTF8(n->label),@"hint":STNUTF8(n->hint),@"value":STNUTF8(n->value),@"bounds":[NSValue valueWithRect:local],@"screenBounds":[NSValue valueWithRect:screen],@"disabled":@(n->disabled),@"focused":@(n->focused),@"offscreen":@(n->offscreen),@"secure":@(n->secure),@"readOnly":@(n->read_only),@"rootChild":@(n->parent==rootID || n->parent==0),@"parentID":@(n->parent),@"children":[NSMutableArray array],@"order":@(i)} mutableCopy];
         if (h.pendingText[@(n->identity)]) d[@"textSnapshot"]=h.pendingText[@(n->identity)];
         STNTextSnapshot *oldText=element.descriptor[@"textSnapshot"], *newText=d[@"textSnapshot"];
         if (oldText && newText && !NSEqualRanges(oldText.selection,newText.selection)) [notifications addObject:@[element,NSAccessibilitySelectedTextChangedNotification]];

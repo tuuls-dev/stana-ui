@@ -30,9 +30,13 @@ import StanaText
 		editors.values.contains { $0.markedText != nil }
 	}
 
-	private var editorOffsets: [STNNodeID: Double] = [:]
+	package var editorOffsets: [STNNodeID: Double] = [:]
 	private var modalFocus: STNNodeID?
 	private var nativeFocus: STNNodeID?
+	package var editorStates: [STNNodeID: EditorState] = [:]
+	package var editorTime: Double = 0
+	package var editorSurfaceActive = true
+	package var editorTask: Task<Void, Never>?
 	private var resettingComposition: Set<STNNodeID> = []
 
 	package init(size: STNSize, text: any TextService, environment: STNEnvironment = .init()) {
@@ -48,14 +52,19 @@ import StanaText
 		document.onDisposed = { [weak self] id in
 			self?.editors.removeValue(forKey: id)
 			self?.editorOffsets.removeValue(forKey: id)
+			self?.editorStates.removeValue(forKey: id)
 		}
 		document.onEditingFocusLoss = { [weak self] id in
 			guard let self, let editor = self.editors[id] else {
 				return
 			}
 
+			editor.breakUndoGroup()
 			try? editor.commitComposition()
 			(self.window as? MacOSWindow)?.discardMarkedText()
+		}
+		document.onDefaultPointer = { [weak self] phase, node, event in
+			self?.editorPointer(phase, node: node, event: event)
 		}
 		scene.editing = { [weak self] node in self?.editingPaint(node) }
 	}
@@ -96,9 +105,19 @@ import StanaText
 		self.window = window
 		window.onDraw = { [weak self] in self?.draw() }
 		window.onEvent = { [weak self] in self?.receive($0) }
-		window.onPointer = { [weak self] phase, point in self?.pointer(phase, at: point) ?? 0 }
-		(window as? MacOSWindow)?.onText = { [weak self] kind, text, range, selected, revision in
-			self?.edit(kind, text: text, range: range, selected: selected, expectedRevision: revision)
+		window.onPointer = { [weak self] phase, point, shift, clicks, button in
+			self?.pointer(phase, at: point, shift: shift, clickCount: clicks, button: button) ?? 0
+		}
+		(window as? MacOSWindow)?.onText = { [weak self] kind, text, range, selected, revision, identity in
+			self?
+				.edit(
+					kind,
+					text: text,
+					range: range,
+					selected: selected,
+					expectedRevision: revision,
+					expectedIdentity: identity
+				)
 		}
 		if window.onState == nil {
 			window.onState = { [weak self] state in
@@ -122,6 +141,7 @@ import StanaText
 
 		layout.layout()
 		nodeSnapshots = document.orderedNodes.map { STNNodeSnapshot($0, focused: document.focused) }
+		publishEditorEvents()
 		publishEditing()
 		semanticSnapshot = semantics.snapshot()
 		window?.accessibility.publish(semanticSnapshot)
@@ -177,6 +197,8 @@ import StanaText
 		}
 
 		closed = true
+		editorTask?.cancel()
+		editorTask = nil
 		if let focused = document.focused {
 			try? editors[focused]?.commitComposition()
 		}
@@ -196,26 +218,40 @@ import StanaText
 		onStable = nil
 	}
 
-	package func installEditor(_ node: NodeRecord, binding: STNBinding<String>) {
+	package func installEditor(_ node: NodeRecord, binding: STNBinding<String>, callbacks: EditorCallbacks = .init()) {
 		let editor = TextBuffer(binding.value)
 		editor.isSecure = node.style.secure
 		editors[node.id] = editor
-		editor.onChange = { [weak node, weak document] value in
+		editorStates[node.id] = EditorState(callbacks: callbacks)
+		editor.wordRange = { [text] in text.wordRange(in: $0, at: $1) }
+		if let onMount = callbacks.onMount {
+			document.deferMount { [weak self, weak node] in
+				guard let self, let node, node.scope.isAlive else {
+					return
+				}
+
+				onMount(STNTextFieldHandle(session: self, id: node.id))
+			}
+		}
+		editor.onChange = { [weak self, weak node, weak document] value in
 			guard let node, let document, node.scope.isAlive else {
 				return
 			}
 
 			STNTransaction.perform {
+				self?.editorStates[node.id]?.pendingChange = value
+				self?.editorStates[node.id]?.annotationRanges = []
 				node.text = value
 				binding.value = value
 				document.changed(node, .all)
 			}
 		}
-		editor.onPresentationChange = { [weak node, weak document] in
+		editor.onPresentationChange = { [weak self, weak node, weak document] in
 			guard let node, let document, node.scope.isAlive else {
 				return
 			}
 
+			self?.resetCaret(node.id)
 			document.changed(node, [.paint, .semantics])
 		}
 		let observation = ValueObservation(read: { binding.value }, equals: { $0 == $1 }) {
@@ -230,6 +266,7 @@ import StanaText
 					(self.window as? MacOSWindow)?.discardMarkedText()
 				}
 
+				self.editorStates[node.id]?.annotationRanges = []
 				editor.external(value)
 				self.resettingComposition.remove(node.id)
 			}
@@ -243,7 +280,7 @@ import StanaText
 		ReactiveRuntime.shared.enqueue(observation)
 	}
 
-	package func editingPaint(_ node: NodeRecord) -> EditingPaint? {
+	package func editingPaint(_ node: NodeRecord, ensureCaret: Bool = true) -> EditingPaint? {
 		guard let editor = editors[node.id] else {
 			return nil
 		}
@@ -255,20 +292,39 @@ import StanaText
 		let start = text.offset(in: shown, utf16Index: selected.location, font: font)
 		let end = text.offset(in: shown, utf16Index: NSMaxRange(selected), font: font)
 		let available = max(1, node.bounds.size.width - node.style.padding.horizontal - 2)
+		let head = text.offset(
+			in: shown,
+			utf16Index: editor.markedText == nil ? editor.head : NSMaxRange(selected),
+			font: font
+		)
+		let width =
+			text.measure(shown.isEmpty ? node.placeholder : shown, font: font, maxWidth: .infinity, wraps: false).size
+			.width
+		let spare = max(0, available - width)
+		let leading = (node.style.alignment == .leading) == (document.direction == .leftToRight)
+		let alignmentOffset = node.style.alignment == .center ? spare / 2 : leading ? 0 : spare
 		var offset = editorOffsets[node.id] ?? 0
-		if end - offset > available {
-			offset = max(0, end - available)
+		if ensureCaret && document.focused == node.id && head - offset > available {
+			offset = max(0, head - available)
 		}
 
-		if end < offset {
-			offset = max(0, end)
+		if ensureCaret && document.focused == node.id && head < offset {
+			offset = max(0, head)
 		}
 
+		offset = min(offset, max(0, width - available))
 		editorOffsets[node.id] = offset
 		let marked = editor.markedRange
 		return .init(
 			text: value,
-			offset: offset,
+			offset: offset - alignmentOffset,
+			caretVisible: editorSurfaceActive && !node.style.isReadOnly
+				&& (editorStates[node.id]?.caretVisible ?? true),
+			hasSelection: selected.length > 0,
+			selectionRects: text.selectionRects(in: shown, range: selected, font: font),
+			annotations: (editor.markedText == nil && !node.style.isReadOnly
+				? (editorStates[node.id]?.annotationRanges ?? []) : [])
+				.flatMap { text.selectionRects(in: shown, range: $0, font: font) },
 			selectionStart: min(start, end),
 			selectionEnd: max(start, end),
 			markedStart: marked.location == NSNotFound
@@ -305,6 +361,13 @@ import StanaText
 				nodeID: id.nativeID
 			)
 			if document.focused == id {
+				window.configureText(
+					identity: id.nativeID,
+					readOnly: node.style.isReadOnly || !document.isEligible(id),
+					canUndo: editor.canUndo,
+					canRedo: editor.canRedo,
+					policies: editorStates[id]?.options.textServices.policies ?? []
+				)
 				window.publishText(
 					value,
 					selection: editor.displaySelection,
@@ -318,11 +381,25 @@ import StanaText
 		}
 	}
 
-	package func edit(_ kind: Int32, text: String, range: NSRange?, selected: NSRange, expectedRevision: UInt64? = nil)
-	{
+	package func edit(
+		_ kind: Int32,
+		text: String,
+		range: NSRange?,
+		selected: NSRange,
+		expectedRevision: UInt64? = nil,
+		expectedIdentity: UInt64? = nil
+	) {
 		guard let focused = document.focused, let editor = editors[focused], let node = document.nodes[focused],
 			document.isEligible(focused)
 		else {
+			return
+		}
+
+		guard expectedIdentity == nil || expectedIdentity == focused.nativeID else {
+			return
+		}
+
+		guard !node.style.isReadOnly || kind == 4 || kind == 5 else {
 			return
 		}
 
@@ -342,7 +419,12 @@ import StanaText
 		STNTransaction.perform {
 			do {
 				switch kind {
-				case 1: try editor.replace(range, with: text)
+				case 1:
+					try editor.replace(
+						range,
+						with: text,
+						group: range == nil && editor.markedText == nil ? .typing : nil
+					)
 				case 2: try editor.setMarked(text, selected: selected, replacement: range)
 				case 3: try editor.commitComposition()
 				case 4: try editingCommand(text, editor: editor, node: node)
@@ -351,6 +433,24 @@ import StanaText
 						try editor.select(range)
 					}
 				case 6: try editor.replace(NSRange(location: 0, length: editor.text.utf16.count), with: text)
+				case 8:
+					guard !node.style.secure, let data = text.data(using: .utf8),
+						let setting = try? JSONDecoder().decode([Int32].self, from: data),
+						setting.count == 2, (0...6).contains(setting[0]),
+						let policy = STNTextField.TextServicePolicy(rawValue: setting[1])
+					else { return }
+					editorStates[focused]?.options.textServices.setPolicy(policy, at: Int(setting[0]))
+				case 7:
+					guard !node.style.secure, let data = text.data(using: .utf8),
+						let ranges = try? JSONDecoder().decode([[Int]].self, from: data)
+					else { return }
+					let validated = try ranges.map { pair -> NSRange in
+						guard pair.count == 2 else { throw STNError.invalidTextRange }
+						let range = NSRange(location: pair[0], length: pair[1])
+						_ = try TextIndices.range(utf16: range, in: editor.text)
+						return range
+					}
+					editorStates[focused]?.annotationRanges = validated
 				default: break
 				}
 
@@ -364,29 +464,32 @@ import StanaText
 		}
 	}
 
-	package func pointer(_ phase: Int, at point: STNPoint) -> Int32 {
+	package func pointer(_ phase: Int, at point: STNPoint, shift: Bool = false, clickCount: Int = 1, button: Int = 0)
+		-> Int32
+	{
 		if phase == 3 {
 			return document.hitTest(point)?.kind == .textField ? 1 : 0
 		}
 
-		let action = document.pointer(phase == 0 ? .down : phase == 1 ? .move : .up, at: point)
-		if action != 0 {
-			document.pointer(.cancel, at: point)
-			return action
-		}
-
-		if phase == 0, let focused = document.focused, let node = document.nodes[focused],
-			let editor = editors[focused], node.bounds.contains(point)
-		{
-			let x = point.x - node.bounds.minX - node.style.padding.leading + (editorOffsets[focused] ?? 0)
-			let index = text.index(in: editor.text, x: x, font: node.style.font)
-			try? editor.select(NSRange(location: index, length: 0))
-		}
-
-		return 0
+		return document.pointer(
+			phase == 0 ? .down : phase == 1 ? .move : phase == 4 ? .cancel : .up,
+			at: point,
+			shift: shift,
+			clickCount: clickCount,
+			button: button
+		)
 	}
 
 	private func editingCommand(_ command: String, editor: TextBuffer, node: NodeRecord) throws {
+		let mutations = ["cut:", "paste:", "undo:", "redo:"]
+		if node.style.isReadOnly && (command.hasPrefix("delete") || mutations.contains(command)) {
+			return
+		}
+
+		if !command.hasPrefix("delete") {
+			editor.breakUndoGroup()
+		}
+
 		switch command {
 		case "insertNewline:":
 			try editor.commitComposition()
@@ -400,19 +503,39 @@ import StanaText
 		case "deleteForward:": try editor.delete(backward: false)
 		case "deleteWordBackward:": try editor.delete(backward: true, word: true)
 		case "deleteWordForward:": try editor.delete(backward: false, word: true)
-		case "moveLeft:", "moveBackward:": editor.move(-1)
-		case "moveRight:", "moveForward:": editor.move(1)
-		case "moveLeftAndModifySelection:", "moveBackwardAndModifySelection:": editor.move(-1, extending: true)
-		case "moveRightAndModifySelection:", "moveForwardAndModifySelection:": editor.move(1, extending: true)
-		case "moveWordLeft:", "moveWordBackward:": editor.move(-1, word: true)
-		case "moveWordRight:", "moveWordForward:": editor.move(1, word: true)
-		case "moveWordLeftAndModifySelection:": editor.move(-1, extending: true, word: true)
-		case "moveWordRightAndModifySelection:": editor.move(1, extending: true, word: true)
-		case "moveToBeginningOfLine:", "moveToBeginningOfDocument:": editor.move(-1, edge: true)
-		case "moveToEndOfLine:", "moveToEndOfDocument:": editor.move(1, edge: true)
-		case "moveToBeginningOfLineAndModifySelection:": editor.move(-1, extending: true, edge: true)
-		case "moveToEndOfLineAndModifySelection:": editor.move(1, extending: true, edge: true)
-		case "selectAll:": try editor.select(NSRange(location: 0, length: editor.text.utf16.count))
+		case "deleteToBeginningOfLine:", "deleteToBeginningOfParagraph:": try editor.delete(backward: true, edge: true)
+		case "deleteToEndOfLine:", "deleteToEndOfParagraph:": try editor.delete(backward: false, edge: true)
+		case "moveLeft:": try moveEditorVisually(-1, editor: editor, node: node)
+		case "moveBackward:": editor.move(-1)
+		case "moveRight:": try moveEditorVisually(1, editor: editor, node: node)
+		case "moveForward:": editor.move(1)
+		case "moveLeftAndModifySelection:": try moveEditorVisually(-1, extending: true, editor: editor, node: node)
+		case "moveBackwardAndModifySelection:": editor.move(-1, extending: true)
+		case "moveRightAndModifySelection:": try moveEditorVisually(1, extending: true, editor: editor, node: node)
+		case "moveForwardAndModifySelection:": editor.move(1, extending: true)
+		case "moveWordLeft:": try moveEditorVisually(-1, word: true, editor: editor, node: node)
+		case "moveWordBackward:": editor.move(-1, word: true)
+		case "moveWordRight:": try moveEditorVisually(1, word: true, editor: editor, node: node)
+		case "moveWordForward:": editor.move(1, word: true)
+		case "moveWordLeftAndModifySelection:":
+			try moveEditorVisually(-1, extending: true, word: true, editor: editor, node: node)
+		case "moveWordBackwardAndModifySelection:": editor.move(-1, extending: true, word: true)
+		case "moveWordRightAndModifySelection:":
+			try moveEditorVisually(1, extending: true, word: true, editor: editor, node: node)
+		case "moveWordForwardAndModifySelection:": editor.move(1, extending: true, word: true)
+		case "moveUp:", "moveToBeginningOfParagraph:", "moveToBeginningOfLine:", "moveToBeginningOfDocument:":
+			editor.move(-1, edge: true)
+		case "moveDown:", "moveToEndOfParagraph:", "moveToEndOfLine:", "moveToEndOfDocument:":
+			editor.move(1, edge: true)
+		case "moveUpAndModifySelection:", "moveToBeginningOfParagraphAndModifySelection:",
+			"moveToBeginningOfLineAndModifySelection:", "moveToBeginningOfDocumentAndModifySelection:":
+			editor.move(-1, extending: true, edge: true)
+		case "moveDownAndModifySelection:", "moveToEndOfParagraphAndModifySelection:",
+			"moveToEndOfLineAndModifySelection:", "moveToEndOfDocumentAndModifySelection:":
+			editor.move(1, extending: true, edge: true)
+		case "selectWord:": try editor.select(self.text.wordRange(in: editor.text, at: editor.head))
+		case "selectLine:", "selectParagraph:", "selectAll:":
+			try editor.select(NSRange(location: 0, length: editor.text.utf16.count))
 		case "undo:": editor.undo()
 		case "redo:": editor.redo()
 		case "copy:", "cut:":
@@ -462,11 +585,20 @@ import StanaText
 				environment.reducedMotion.value = motion
 			}
 		case .surfaceFocus(let focused):
+			editorSurfaceActive = focused
+			if let id = document.focused {
+				resetCaret(id)
+				document.changed(document.nodes[id] ?? document.root, .paint)
+			}
 			if !focused {
 				document.pointer(.cancel, at: .zero)
 				document.setFocus(nil)
 			}
 		case .deactivated:
+			editorSurfaceActive = false
+			editorTask?.cancel()
+			editorTask = nil
+			document.changed(document.root, .paint)
 			document.pointer(.cancel, at: .zero)
 			if let id = document.focused {
 				try? editors[id]?.commitComposition()

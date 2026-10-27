@@ -76,7 +76,7 @@ extension MacOSWindow {
 				window.receiveState(value.pointee)
 			}
 		}
-		callbacks.pointer = { context, phase, x, y in
+		callbacks.pointer = { context, phase, x, y, shift, clicks, button in
 			guard let context else {
 				return 0
 			}
@@ -84,7 +84,7 @@ extension MacOSWindow {
 			return MainActor.assumeIsolated {
 				let window = Unmanaged<MacOSWindow>.fromOpaque(context).takeUnretainedValue()
 				if let handler = window.onPointer {
-					return handler(Int(phase), .init(x: x, y: y))
+					return handler(Int(phase), .init(x: x, y: y), shift, Int(clicks), Int(button))
 				}
 
 				window.onEvent?(.pointer(Int(phase), .init(x: x, y: y)))

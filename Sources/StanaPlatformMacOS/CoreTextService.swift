@@ -1,4 +1,5 @@
 import CStanaMacOS
+import Foundation
 import StanaPrimitives
 import StanaText
 
@@ -16,6 +17,34 @@ import StanaText
 
 	package func index(in text: String, x: Double, font: STNFont) -> Int {
 		text.withNativeUTF8 { Int(stn_text_index($0, font.size, font.weight.rawValue, x)) }
+	}
+
+	package func selectionRects(in text: String, range: NSRange, font: STNFont) -> [STNRect] {
+		text.withNativeUTF8 { native in
+			let count = stn_text_selection_rects(
+				native,
+				font.size,
+				font.weight.rawValue,
+				UInt64(range.location),
+				UInt64(range.length),
+				nil,
+				0
+			)
+			var rects = [stn_rect](repeating: .init(), count: count)
+			rects.withUnsafeMutableBufferPointer {
+				_ = stn_text_selection_rects(
+					native,
+					font.size,
+					font.weight.rawValue,
+					UInt64(range.location),
+					UInt64(range.length),
+					$0.baseAddress,
+					$0.count
+				)
+			}
+
+			return rects.map { .init(x: $0.x, y: $0.y, width: $0.width, height: $0.height) }
+		}
 	}
 
 	package func offsets(in text: String, font: STNFont) -> [Double] {

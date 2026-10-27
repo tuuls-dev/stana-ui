@@ -40,7 +40,7 @@ package enum PlatformEvent: Sendable {
 		get set
 	}
 
-	var onPointer: ((Int, STNPoint) -> Int32)? {
+	var onPointer: ((Int, STNPoint, Bool, Int, Int) -> Int32)? {
 		get set
 	}
 

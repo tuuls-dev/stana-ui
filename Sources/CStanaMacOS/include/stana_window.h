@@ -40,7 +40,7 @@ typedef struct {
 } stn_window_state;
 typedef void (*stn_window_state_callback)(void *, const stn_window_state *);
 // Pointer phase: 0 down, 1 move, 2 up, 3 side-effect-free keyboard-focus inquiry.
-typedef int32_t (*stn_window_pointer_callback)(void *, int32_t, double, double);
+typedef int32_t (*stn_window_pointer_callback)(void *, int32_t, double, double, bool, int32_t, int32_t);
 typedef bool (*stn_window_close_callback)(void *);
 typedef void (*stn_window_idle_callback)(void *);
 typedef void (*stn_window_operation_callback)(void *, uint64_t, int32_t, int32_t);

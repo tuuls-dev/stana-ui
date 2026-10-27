@@ -8,7 +8,7 @@
 }
 - (void)textRequest:(int)kind text:(NSString *)text replacement:(NSRange)replacement selected:(NSRange)selected revision:(uint64_t)revision {
     if (!self.closing && self.textCallback) self.textCallback(self.context, kind, STNBorrowedString(text),
-        replacement.location == NSNotFound ? UINT64_MAX : replacement.location, replacement.length, selected.location, selected.length, revision);
+        replacement.location == NSNotFound ? UINT64_MAX : replacement.location, replacement.length, selected.location, selected.length, revision, self.view.textIdentity);
 }
 - (void)windowDidResize:(NSNotification *)n {
     NSSize s = self.view.bounds.size;
@@ -23,7 +23,7 @@
     return !self.windowCallbacks.should_close || self.windowCallbacks.should_close(self.context);
 }
 - (void)windowWillClose:(NSNotification *)n { [self emit:(stn_event){.kind=7}]; }
-- (void)windowDidBecomeKey:(NSNotification *)n { [self publishState]; }
+- (void)windowDidBecomeKey:(NSNotification *)n { [self emit:(stn_event){.kind=15,.x=1}]; [self publishState]; }
 - (void)windowDidBecomeMain:(NSNotification *)n { [self publishState]; }
 - (void)windowDidResignMain:(NSNotification *)n { [self publishState]; }
 - (void)windowDidMiniaturize:(NSNotification *)n { [self publishState]; }
@@ -98,7 +98,7 @@ void stn_window_destroy(stn_window p) {
     STNWindowHost *host = (__bridge_transfer STNWindowHost *)p;
     [host.dragTimer invalidate]; host.dragTimer=nil; [host stopObservingWindow];
     host.closing = YES; host.windowCallbacks = (stn_window_callbacks){0}; host.eventCallback = NULL; host.drawCallback = NULL; host.textCallback = NULL; host.context = NULL;
-    [host.view.inputContext deactivate]; host.view.host = nil;
+    [host.view.inputContext deactivate]; [host.view invalidateTextServices]; host.view.host = nil;
     if (host.isSurface) { [host.view removeFromSuperview]; }
     else {
         if (host.window.sheetParent) [host.window.sheetParent endSheet:host.window returnCode:0];
@@ -113,7 +113,7 @@ void stn_window_destroy(stn_window p) {
 void stn_window_focus_text(stn_window p, bool editing) {
     STNContentView *view = STNHost(p).view; view.editing = editing;
     if (editing) { [view.window makeFirstResponder:view]; [view.inputContext activate]; }
-    else { [view.inputContext deactivate]; view.textSnapshot = nil; }
+    else { [view.inputContext deactivate]; [view invalidateTextServices]; view.textSnapshot = nil; view.textIdentity = 0; }
 }
 void stn_window_discard_marked(stn_window p) { [STNHost(p).view.inputContext discardMarkedText]; }
 bool stn_window_test_key_equivalent(stn_window p, stn_utf8 key) {
@@ -139,7 +139,7 @@ bool stn_window_test_key_equivalent(stn_window p, stn_utf8 key) {
     NSEvent *event=NSApp.currentEvent;
     if (event && self.host.windowCallbacks.pointer) {
         NSPoint p=[self convertPoint:event.locationInWindow fromView:nil];
-        return self.host.windowCallbacks.pointer(self.host.context,3,p.x,p.y)!=0;
+        return self.host.windowCallbacks.pointer(self.host.context,3,p.x,p.y,false,1,0)!=0;
     }
     return self.editing;
 }
@@ -155,7 +155,7 @@ bool stn_window_test_key_equivalent(stn_window p, stn_utf8 key) {
 - (BOOL)acceptsFirstMouse:(NSEvent *)event { return YES; }
 - (void)updateTrackingAreas {
     [super updateTrackingAreas]; if (self.tracking) [self removeTrackingArea:self.tracking];
-    self.tracking = [[NSTrackingArea alloc] initWithRect:NSZeroRect options:NSTrackingMouseMoved|NSTrackingActiveInKeyWindow|NSTrackingInVisibleRect owner:self userInfo:nil]; [self addTrackingArea:self.tracking];
+    self.tracking = [[NSTrackingArea alloc] initWithRect:NSZeroRect options:NSTrackingMouseMoved|NSTrackingCursorUpdate|NSTrackingActiveInKeyWindow|NSTrackingInVisibleRect owner:self userInfo:nil]; [self addTrackingArea:self.tracking];
 }
 - (void)drawRect:(NSRect)dirty {
     STNWindowHost *h=self.host;
@@ -170,14 +170,15 @@ bool stn_window_test_key_equivalent(stn_window p, stn_utf8 key) {
 }
 - (void)pointer:(NSEvent *)event kind:(int)kind {
     NSPoint p=[self convertPoint:event.locationInWindow fromView:nil];
-    if (self.host.windowCallbacks.pointer) self.host.windowCallbacks.pointer(self.host.context,kind-2,p.x,p.y);
+    if (self.host.windowCallbacks.pointer) self.host.windowCallbacks.pointer(self.host.context,kind-2,p.x,p.y,(event.modifierFlags & NSEventModifierFlagShift)!=0,(int32_t)event.clickCount,(int32_t)event.buttonNumber);
     else [self.host emit:(stn_event){.kind=kind,.x=p.x,.y=p.y}];
 }
 - (void)mouseDown:(NSEvent *)e {
+    if (self.editing && self.hasMarkedText && [self.inputContext handleEvent:e]) return;
     STNWindowHost *host=self.host;
     if (!host.windowCallbacks.pointer) { [self pointer:e kind:2]; return; }
     NSPoint p=[self convertPoint:e.locationInWindow fromView:nil];
-    int32_t action=host.windowCallbacks.pointer(host.context,0,p.x,p.y);
+    int32_t action=host.windowCallbacks.pointer(host.context,0,p.x,p.y,(e.modifierFlags & NSEventModifierFlagShift)!=0,(int32_t)e.clickCount,(int32_t)e.buttonNumber);
     if (action==1 && host.window.movable) {
         STNBeginWindowTracking(host); [host.window performWindowDragWithEvent:e];
     } else if (action>=16 && (host.window.styleMask & NSWindowStyleMaskResizable)) {
@@ -188,11 +189,17 @@ bool stn_window_test_key_equivalent(stn_window p, stn_utf8 key) {
     if (self.host.resizeEdges) STNResizeWindow(self.host,e,0);
     else [self pointer:e kind:3];
 }
-- (void)mouseMoved:(NSEvent *)e { [self pointer:e kind:3]; }
+- (void)cursorUpdate:(NSEvent *)e {
+    NSPoint p=[self convertPoint:e.locationInWindow fromView:nil];
+    BOOL text=self.host.windowCallbacks.pointer && self.host.windowCallbacks.pointer(self.host.context,3,p.x,p.y,false,1,0)==1;
+    [(text ? NSCursor.IBeamCursor : NSCursor.arrowCursor) set];
+}
+- (void)mouseMoved:(NSEvent *)e { [self pointer:e kind:3]; [self cursorUpdate:e]; }
 - (void)mouseUp:(NSEvent *)e {
     if (self.host.resizeEdges) STNResizeWindow(self.host,e,-1);
     else [self pointer:e kind:4];
 }
+- (void)rightMouseDown:(NSEvent *)e { [self pointer:e kind:2]; [self pointer:e kind:4]; [super rightMouseDown:e]; }
 - (void)scrollWheel:(NSEvent *)e { NSPoint p=[self convertPoint:e.locationInWindow fromView:nil]; [self.host emit:(stn_event){.kind=5,.x=p.x,.y=p.y,.a=e.scrollingDeltaX,.b=e.scrollingDeltaY}]; }
 - (BOOL)performKeyEquivalent:(NSEvent *)event {
     NSString *key=event.charactersIgnoringModifiers.lowercaseString;

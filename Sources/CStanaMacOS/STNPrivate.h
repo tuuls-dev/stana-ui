@@ -3,7 +3,7 @@
 #import <ImageIO/ImageIO.h>
 #import "include/stana_macos.h"
 
-@class STNContentView, STNTextSnapshot;
+@class STNContentView, STNTextSnapshot, STNTextCheckingSession;
 @interface STNWindowHost : NSObject <NSWindowDelegate>
 @property(nonatomic, strong) NSWindow *window;
 @property(nonatomic, strong) STNContentView *view;
@@ -65,7 +65,21 @@
 @property(nonatomic, weak) STNWindowHost *host;
 @property(nonatomic, strong) STNTextSnapshot *textSnapshot;
 @property(nonatomic) BOOL editing;
+@property(nonatomic) uint64_t textIdentity;
+@property(nonatomic) BOOL textReadOnly, textCanUndo, textCanRedo;
+@property(nonatomic, copy) NSArray<NSNumber *> *textPolicies;
+@property(nonatomic, strong) STNTextCheckingSession *checkingSession;
+@property(nonatomic) uint64_t serviceIdentity, serviceRevision;
+@property(nonatomic) NSRange serviceSelection, insertedRange;
+@property(nonatomic) BOOL textUserInsertion;
 @property(nonatomic, strong) NSTrackingArea *tracking;
+@end
+
+@interface STNContentView (TextServices) <NSServicesMenuRequestor, NSMenuItemValidation>
+- (void)refreshTextServices;
+- (void)invalidateTextServices;
+
+- (void)complete:(id)sender;
 @end
 
 @interface STNContentView (TextInput) <NSTextInputClient>
