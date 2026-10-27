@@ -5,6 +5,14 @@ set positional-arguments
 default:
     @just --list
 
+# Format all repository Swift files with the bundled Swift formatter.
+format:
+    Scripts/format-swift.sh
+
+# Check Swift formatting without changing files.
+check-format:
+    Scripts/format-swift.sh lint
+
 # Build the library in debug mode.
 build:
     swift build
@@ -52,4 +60,4 @@ package package-path product bundle-id:
     Scripts/package-macos-app.sh "$1" "$2" "$3"
 
 # Run all non-GUI verification sequentially, stopping on the first failure.
-check: check-boundaries test check-api check-runtime build-examples build-release
+check: check-format check-boundaries test check-api check-runtime build-examples build-release

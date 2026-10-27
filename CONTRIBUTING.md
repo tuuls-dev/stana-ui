@@ -3,9 +3,33 @@
 Use Swift 6.4 in Swift 6 mode. Begin API changes with an example in a separate consumer package or `Fixtures/API/Valid`; add a negative fixture when misuse should not compile.
 
 Optionally install `just` with `brew install just`, then run `just` to list the
-developer commands. `just check` runs the boundary checks, strict tests, API
+developer commands. `just check` runs formatting and boundary checks, strict tests, API
 fixtures, runtime-fault probes, all four example builds, and release build in
 sequence. The underlying Swift commands and scripts remain supported.
+
+## Swift formatting
+
+Run `just format` before submitting Swift changes, or `just check-format` to check
+without editing files. Both use Swift 6.4's built-in `swift format`; no additional
+formatter is required. Without `just`, run `Scripts/format-swift.sh` or
+`Scripts/format-swift.sh lint`. They cover repository Swift files, including new
+unignored files, package manifests, examples, benchmarks, and API fixtures, while
+excluding ignored build output. Formatting is checked first by `just check` and CI.
+
+Use tabs (one per indentation level, displayed as four columns), a 120-column
+limit, and at most one consecutive blank line. Wrapped argument lists put each
+argument on its own line; multiline expression-chain components are separated
+onto lines. `.editorconfig` supplies matching Swift indentation settings.
+
+Give code breathing room: separate methods, initializers, types, and computed
+properties with one blank line, while keeping related stored properties together.
+Expand nonempty one-line function and control-flow bodies and leave a blank line
+between multiline control-flow blocks and following statements. Avoid padding
+inside opening/closing braces. These are writing conventions, not fully automated
+checks: the bundled formatter preserves existing gaps and expanded bodies, but
+cannot require their presence.
+
+## Contribution checklist
 
 1. Read [architecture](Docs/Architecture.md) and [developer experience](Docs/Design/DeveloperExperience.md).
 2. Keep shared names/defaults consistent. No public placeholders, modifier chains, implicit observation, or native types in public signatures.

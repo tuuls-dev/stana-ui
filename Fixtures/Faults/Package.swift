@@ -2,7 +2,8 @@
 import PackageDescription
 
 let package = Package(
-    name: "StanaFaultFixtures", platforms: [.macOS(.v14)],
-    dependencies: [.package(path: "../..")],
-    targets: [.executableTarget(name: "FaultProbe", dependencies: [.product(name: "Stana", package: "stana-ui")])]
+	name: "StanaFaultFixtures",
+	platforms: [.macOS(.v14)],
+	dependencies: [.package(path: "../..")],
+	targets: [.executableTarget(name: "FaultProbe", dependencies: [.product(name: "Stana", package: "stana-ui")])]
 )

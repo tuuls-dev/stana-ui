@@ -54,6 +54,8 @@ still required. Commands also work from repository subdirectories.
 
 ```sh
 just                 # List available commands
+just format          # Format Swift files with the bundled formatter (tabs, four-column width)
+just check-format    # Check Swift formatting without editing files
 just build           # Debug build
 just build-release   # Release build, Swift warnings as errors
 just test            # Tests, Swift and native warnings as errors
@@ -64,7 +66,8 @@ just benchmark       # Release-mode headless benchmark; prints JSON
 just package Examples/Counter CounterApp dev.stana.counter
 ```
 
-Individual checks are available as `just check-boundaries`, `just check-api`, and
+Formatting runs first in `just check` and CI; see [contributing](CONTRIBUTING.md#swift-formatting)
+for the spacing conventions. Individual checks are available as `just check-boundaries`, `just check-api`, and
 `just check-runtime`; `just build-examples` builds all four examples. Direct Swift
 commands and scripts below remain supported, and CI does not require `just`.
 
