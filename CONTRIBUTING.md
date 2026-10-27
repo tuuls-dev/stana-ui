@@ -7,6 +7,15 @@ developer commands. `just check` runs formatting and boundary checks, strict tes
 fixtures, runtime-fault probes, all five example builds, and release build in
 sequence. The underlying Swift commands and scripts remain supported.
 
+## Releases
+
+Run `just version major`, `just version minor`, or `just version patch` from a
+clean `main` checkout matching `origin/main`. The command asks for confirmation,
+bumps `VERSION`, commits it, creates an annotated `vX.Y.Z` tag, and atomically
+pushes the commit and tag to `origin`. `VERSION` starts at `0.0.0`; major and
+minor bumps reset lower components. No tests run as part of this command. A failed
+push retains the local commit and tag and prints the command to retry.
+
 ## Swift formatting
 
 Run `just format` before submitting Swift changes, or `just check-format` to check

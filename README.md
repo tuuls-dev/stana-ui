@@ -60,6 +60,7 @@ just build           # Debug build
 just build-release   # Release build, Swift warnings as errors
 just test            # Tests, Swift and native warnings as errors
 just check           # All non-GUI checks, all five example builds, and release build
+just version patch   # Confirm, bump VERSION, commit, tag, and push (also minor/major)
 just example         # Run Counter
 just example Counter # Run a named example
 just benchmark       # Release-mode headless benchmark; prints JSON

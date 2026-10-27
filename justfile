@@ -41,6 +41,10 @@ check-api:
 check-runtime:
     Scripts/check-runtime-faults.sh
 
+# Confirm, bump VERSION, commit, and push a major, minor, or patch release tag.
+version bump:
+    @Scripts/version.sh "$1"
+
 # Build all five consumer examples with Swift warnings as errors.
 build-examples:
     for example in Counter Preferences EditableCollection WindowConfiguration TextFields; do \
