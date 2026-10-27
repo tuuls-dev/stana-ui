@@ -8,7 +8,7 @@
 
 **Public type prefix:** `STN`
 
-> **Design thesis:** Stana is a cross-platform, retained-mode UI engine. Swift builders *construct* a persistent tree; they are not functions that rerun whenever state changes. Signals bind to concrete node properties, so ordinary updates avoid component reconciliation entirely. Layout, paint, input, and accessibility are incrementally maintained projections of the same document.
+> **Design thesis:** Stana is a cross-platform, retained-mode UI engine. Swift builders _construct_ a persistent tree; they are not functions that rerun whenever state changes. Signals bind to concrete node properties, so ordinary updates avoid component reconciliation entirely. Layout, paint, input, and accessibility are incrementally maintained projections of the same document.
 
 ## 0. How to use this specification
 
@@ -18,17 +18,17 @@ The words **must**, **should**, and **may** express Stana's own requirements, re
 
 ### 0.1 Decision baseline
 
-| Area | Default for implementation | Promotion/change gate |
-|---|---|---|
-| Product scope | Standalone desktop windows; macOS, Windows, Linux are target platforms, not current supported platforms | Per-platform qualification in §14; no blanket cross-platform release claim |
-| Runtime | One UI writer on `@MainActor`; synchronous logical commits; demand-driven computeds | Deterministic graph, transaction, disposal, and reentrancy tests |
-| Node storage | Class-backed records for M1; opaque identity API permits arena migration | Adopt arena only if equivalent workloads show a useful memory/latency improvement |
-| Graphics | Skia evaluation behind a Stana-owned C ABI; raster reference renderer first | Verify exact revision, GPU backend, packaging, and recovery per OS at M0/M4 |
-| Accessibility | AccessKit C adapter is the preferred integration candidate | Validate action, text, callback-thread, and lifecycle coverage; native shim where necessary |
-| Text | Dedicated paragraph/shaping/editing subsystem, not renderer string drawing | Unicode, IME, screen-reader editing, and selection gates |
-| Layout | Box, stacks, overlay, scroll; explicit measure/place contract | Grid and virtualization only after baseline correctness |
-| Visual language | Stana-themed widgets that honor platform settings and interaction conventions | Cross-platform interaction and accessibility review |
-| Deferred | Mobile, rich text, web compatibility, embedded-host product, plugin ABI | Separate proposals; not implicit v1 commitments |
+| Area            | Default for implementation                                                                              | Promotion/change gate                                                                       |
+| --------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Product scope   | Standalone desktop windows; macOS, Windows, Linux are target platforms, not current supported platforms | Per-platform qualification in §14; no blanket cross-platform release claim                  |
+| Runtime         | One UI writer on `@MainActor`; synchronous logical commits; demand-driven computeds                     | Deterministic graph, transaction, disposal, and reentrancy tests                            |
+| Node storage    | Class-backed records for M1; opaque identity API permits arena migration                                | Adopt arena only if equivalent workloads show a useful memory/latency improvement           |
+| Graphics        | Skia evaluation behind a Stana-owned C ABI; raster reference renderer first                             | Verify exact revision, GPU backend, packaging, and recovery per OS at M0/M4                 |
+| Accessibility   | AccessKit C adapter is the preferred integration candidate                                              | Validate action, text, callback-thread, and lifecycle coverage; native shim where necessary |
+| Text            | Dedicated paragraph/shaping/editing subsystem, not renderer string drawing                              | Unicode, IME, screen-reader editing, and selection gates                                    |
+| Layout          | Box, stacks, overlay, scroll; explicit measure/place contract                                           | Grid and virtualization only after baseline correctness                                     |
+| Visual language | Stana-themed widgets that honor platform settings and interaction conventions                           | Cross-platform interaction and accessibility review                                         |
+| Deferred        | Mobile, rich text, web compatibility, embedded-host product, plugin ABI                                 | Separate proposals; not implicit v1 commitments                                             |
 
 These are design defaults, not user-selected dependency commitments. Alternatives and decisive experiments are recorded in §16.
 
@@ -77,11 +77,11 @@ These are design defaults, not user-selected dependency commitments. Alternative
 
 Stana proposes an **integration and authoring model**, not the invention of retained trees, stable identity, signals, or incremental computation: mount-once Swift composition, explicit property/structural bindings, scope-owned lifetimes, and one document with specified input/semantic/presentation contracts. Its research hypothesis is that this combination reduces update work while keeping identity and lifetime behavior understandable. Neither superiority nor ergonomic simplicity is established here.
 
-| Closest alternative | Existing capability / relevant distinction | Decisive comparison |
-|---|---|---|
-| Qt Quick/QML | Dependency-tracked property bindings already update object properties; this is a close reactive desktop comparison, not a full-tree-rebuild straw man | Equivalent editable desktop workloads; include graph, layout, text, semantics, memory, and native integration costs |
-| SwiftUI | Explicit/structural identity, lifetime, and dependencies already preserve state across view-value updates; reevaluating a description does not imply destroying every control | macOS authoring/lifetime tasks and matched application outcomes; report platform and renderer differences, not just builder counts |
-| Simple retained full-recompute reference | Preserve the same mounted controls, but reevaluate all demanded bindings and perform uncached full layout/scene projection at each commit | Isolate incremental bookkeeping benefits/costs without confusing recomputation with remounting |
+| Closest alternative                      | Existing capability / relevant distinction                                                                                                                                    | Decisive comparison                                                                                                                |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Qt Quick/QML                             | Dependency-tracked property bindings already update object properties; this is a close reactive desktop comparison, not a full-tree-rebuild straw man                         | Equivalent editable desktop workloads; include graph, layout, text, semantics, memory, and native integration costs                |
+| SwiftUI                                  | Explicit/structural identity, lifetime, and dependencies already preserve state across view-value updates; reevaluating a description does not imply destroying every control | macOS authoring/lifetime tasks and matched application outcomes; report platform and renderer differences, not just builder counts |
+| Simple retained full-recompute reference | Preserve the same mounted controls, but reevaluate all demanded bindings and perform uncached full layout/scene projection at each commit                                     | Isolate incremental bookkeeping benefits/costs without confusing recomputation with remounting                                     |
 
 The capability descriptions are grounded in [Qt's property-binding documentation](https://doc.qt.io/qt-6/qtqml-syntax-propertybinding.html) and [Apple's identity/lifetime/dependencies explanation](https://developer.apple.com/videos/play/wwdc2021/10022/). The proposed comparisons are Stana experiments (§13.5), not findings from those sources. A single-writer retained engine may lose on cold mount, high fanout, or nearly full-document changes; those are required workloads, not exclusions. Compare native interaction and accessibility outcomes as well as update time. A custom renderer and explicit bindings do not by themselves establish novelty, performance, or usability.
 
@@ -157,14 +157,14 @@ STNBox(properties: .init(
 
 The public initializer shapes are `STNBox(properties:content:)` for a container and `STNText(properties:)` / `STNButton(properties:)` for leaves. Child closures use `@STNBuilder`; properties are not result builders. The concrete `Properties` type exposes only inputs meaningful for that component. Required content or bindings have no fabricated defaults; optional configuration retains the component's documented defaults. Components whose properties all have defaults may omit the argument, for example `STNSpacer()` or `STNHStack { ... }`.
 
-| Input category | Properties-first representation |
-|---|---|
-| Content | `text:`, `image:`, or other component-specific named input; no positional title/text overload |
-| Editable state | `value: stnName.binding`, `isOn: stnEnabled.binding`; retain explicit `STNBinding<Value>` types |
+| Input category        | Properties-first representation                                                                                                          |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Content               | `text:`, `image:`, or other component-specific named input; no positional title/text overload                                            |
+| Editable state        | `value: stnName.binding`, `isOn: stnEnabled.binding`; retain explicit `STNBinding<Value>` types                                          |
 | Layout and appearance | Applicable fields such as `alignment:`, `spacing:`, `padding:`, `frame: .init(...)`, `background:`, `cornerRadius:`, `font:`, `opacity:` |
-| Accessibility | `accessibility: .init(label: ..., hint: ..., heading: ..., group: ...)`, using typed `STNAccessibilityProperties` |
-| Actions and events | `onActivate: { ... }`, `onPointerDown: { event in ... }`, and other applicable callbacks |
-| Mount notification | `onMount: { handle in ... }`, with the post-attachment/stale-handle contract in §3.6 |
+| Accessibility         | `accessibility: .init(label: ..., hint: ..., heading: ..., group: ...)`, using typed `STNAccessibilityProperties`                        |
+| Actions and events    | `onActivate: { ... }`, `onPointerDown: { event in ... }`, and other applicable callbacks                                                 |
+| Mount notification    | `onMount: { handle in ... }`, with the post-attachment/stale-handle contract in §3.6                                                     |
 
 Use the same field names, value types, and defaults for shared capabilities across component-specific `Properties` types. Accessibility fields are optional overrides: omitting them keeps built-in semantics, `heading` supplies a heading level, and `group: true` requests semantic grouping. They do not require applications to restate a button's role or action. Nonapplicable fields must fail type checking rather than being ignored. Do not use stringly typed property bags, `Any`, or dynamic member lookup to approximate this API.
 
@@ -255,7 +255,7 @@ STNVStack(properties: .init(spacing: 8)) {
 }
 ```
 
-`STNComputed` tracks *actual reads*, caches its last value, and updates dependencies when conditional computation branches change.
+`STNComputed` tracks _actual reads_, caches its last value, and updates dependencies when conditional computation branches change.
 
 ### 3.4 Explicit two-way binding
 
@@ -311,11 +311,11 @@ For v1, `STNIf` disposes its inactive branch and mounts the newly selected branc
 
 **Value-item comparison and replacement:** the overload above requires `Item: Equatable` and compares the last mounted item with the new item using `==`, separately from key matching. A non-`Equatable` overload requires an explicit pure `contentEquals: (Item, Item) -> Bool`; `Identifiable` alone is insufficient. Equality must cover every mount-captured input whose change should be displayed, including closure configuration. Equal items retain their old descendants and captured values; unequal items replace the entire child subtree under the surviving keyed scope. Array-signal equality (§6.1) is an earlier gate: it must not suppress an update that row comparison needs to see. Mutable reference payloads are not value-item change detection.
 
-| Same key, operation | Descendant and lifetime consequences |
-|---|---|
-| Value item compares equal; insert/move elsewhere | Existing descendants remain; no row-builder rerun |
-| Value item compares unequal | Dispose old descendants, then mount replacements. Editing focus is repaired, not preserved by identity; selection, composition, undo, and child-local state are lost. Descendant-scoped tasks/subscriptions are cancelled; replacement mount work starts anew |
-| Stable observable row; one property changes | Update that property's bindings, retaining the row and editor nodes, local state, and task scopes unless an explicit nested structural change removes them |
+| Same key, operation                              | Descendant and lifetime consequences                                                                                                                                                                                                                          |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Value item compares equal; insert/move elsewhere | Existing descendants remain; no row-builder rerun                                                                                                                                                                                                             |
+| Value item compares unequal                      | Dispose old descendants, then mount replacements. Editing focus is repaired, not preserved by identity; selection, composition, undo, and child-local state are lost. Descendant-scoped tasks/subscriptions are cancelled; replacement mount work starts anew |
+| Stable observable row; one property changes      | Update that property's bindings, retaining the row and editor nodes, local state, and task scopes unless an explicit nested structural change removes them                                                                                                    |
 
 **Preferred editable-row sketch:** `observableRows:` is a distinct overload for reference models with stable per-property signals. The same key must retain the same model instance (`===`); a different instance under an existing key rejects the plan as `rowIdentityChanged` before mutation. Deliberate replacement requires removal/disposal followed by a new mount. It never silently rebinds a builder's captured reference.
 
@@ -374,25 +374,25 @@ Builders produce single-mount descriptions; they do not expose a live handle bef
 
 ## 4. Component catalogue
 
-| Public component | Role |
-|---|---|
-| `STNBox` | Layout/style container: width/height, padding, border, background, clip |
-| `STNHStack` | Horizontal sequential layout |
-| `STNVStack` | Vertical sequential layout |
-| `STNZStack` | Layered children |
-| `STNSpacer` | Flexible empty space, omitted from semantic tree |
-| `STNGrid` | Rows/columns and named grid placement |
-| `STNText` | Shaped and selectable display text |
-| `STNImage` | Bitmap/vector image with optional accessible description |
-| `STNButton` | Accessible clickable action, keyboard activation |
-| `STNToggle` | On/off control with checked state |
-| `STNTextField` | Single-line editing, caret, selection, IME, accessibility text APIs |
-| `STNTextEditor` | Multiline editing; deferred beyond the baseline text-field milestone |
-| `STNScrollView` | Scrollable clipped viewport with semantic scroll actions |
-| `STNCanvas` | Custom drawing component; **not** the window-level graphics surface |
-| `STNIf` / `STNForEach` | Localized structural scopes |
-| `STNLazyVStack` / `STNList` | Virtualized collection components; later milestone |
-| `STNFocusScope` | Keyboard/focus grouping |
+| Public component            | Role                                                                    |
+| --------------------------- | ----------------------------------------------------------------------- |
+| `STNBox`                    | Layout/style container: width/height, padding, border, background, clip |
+| `STNHStack`                 | Horizontal sequential layout                                            |
+| `STNVStack`                 | Vertical sequential layout                                              |
+| `STNZStack`                 | Layered children                                                        |
+| `STNSpacer`                 | Flexible empty space, omitted from semantic tree                        |
+| `STNGrid`                   | Rows/columns and named grid placement                                   |
+| `STNText`                   | Shaped and selectable display text                                      |
+| `STNImage`                  | Bitmap/vector image with optional accessible description                |
+| `STNButton`                 | Accessible clickable action, keyboard activation                        |
+| `STNToggle`                 | On/off control with checked state                                       |
+| `STNTextField`              | Single-line editing, caret, selection, IME, accessibility text APIs     |
+| `STNTextEditor`             | Multiline editing; deferred beyond the baseline text-field milestone    |
+| `STNScrollView`             | Scrollable clipped viewport with semantic scroll actions                |
+| `STNCanvas`                 | Custom drawing component; **not** the window-level graphics surface     |
+| `STNIf` / `STNForEach`      | Localized structural scopes                                             |
+| `STNLazyVStack` / `STNList` | Virtualized collection components; later milestone                      |
+| `STNFocusScope`             | Keyboard/focus grouping                                                 |
 
 This catalogue describes intended vocabulary, not a promise that all components ship at the same stage. Grid, selectable display text, multiline editing, advanced custom primitives, and virtualization require their own capability qualification; the first usable build is the vertical slice in §14. Application-defined components compose these same primitives through the public extension model in §18.
 
@@ -568,18 +568,18 @@ Signals represent **current state**, not a lossless event stream. Multiple write
 
 ### 6.2 Required behavior
 
-| Operation | Required contract |
-|---|---|
+| Operation                       | Required contract                                                                                                                                                                                  |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Write outside an explicit batch | Open and synchronously finish an implicit logical transaction; writes in an input handler join the dispatch batch and commit after dispatch (§10.1); remaining visual work is scheduled separately |
-| Write inside a batch | Update source state immediately; defer bound-property publication until outer commit; document queries reject as `transactionInProgress` except for the captured dispatch snapshot (§§6.4.1, 10.1) |
-| Read a source after writing | Read the latest source value in that synchronous transaction |
-| Read a stale computed | Recursively validate dependencies and return a value consistent with current sources |
-| Equal source/output | Suppress downstream observable changes; equality never suppresses dependency bookkeeping |
-| Computed evaluation | Synchronous, pure, nonthrowing; no signal writes, tree mutation, I/O, or task creation |
-| Bound-property publication | Run after graph stabilization; no application effects during partial publication |
-| Unobserved computed | May remain stale until demanded; owns no permanent document subscription by itself |
-| Subscription | Scope-owned, explicitly cancellable, cancellation idempotent; cancelled delivery is skipped even if already queued |
-| Runtime fault | Cycles or forbidden mutation produce a dependency-path diagnostic and fail the affected UI runtime in all supported builds; never silently continue with inconsistent projections |
+| Write inside a batch            | Update source state immediately; defer bound-property publication until outer commit; document queries reject as `transactionInProgress` except for the captured dispatch snapshot (§§6.4.1, 10.1) |
+| Read a source after writing     | Read the latest source value in that synchronous transaction                                                                                                                                       |
+| Read a stale computed           | Recursively validate dependencies and return a value consistent with current sources                                                                                                               |
+| Equal source/output             | Suppress downstream observable changes; equality never suppresses dependency bookkeeping                                                                                                           |
+| Computed evaluation             | Synchronous, pure, nonthrowing; no signal writes, tree mutation, I/O, or task creation                                                                                                             |
+| Bound-property publication      | Run after graph stabilization; no application effects during partial publication                                                                                                                   |
+| Unobserved computed             | May remain stale until demanded; owns no permanent document subscription by itself                                                                                                                 |
+| Subscription                    | Scope-owned, explicitly cancellable, cancellation idempotent; cancelled delivery is skipped even if already queued                                                                                 |
+| Runtime fault                   | Cycles or forbidden mutation produce a dependency-path diagnostic and fail the affected UI runtime in all supported builds; never silently continue with inconsistent projections                  |
 
 Model application failures as values (`Result`, loading/error state), not exceptions escaping a computed getter. The runtime fault channel is for programmer errors, not routine validation failures. The simplified immediate-callback observer implementation from the earlier proposal is intentionally not a production algorithm: callback order, recursive writes, and teardown would make it inconsistent.
 
@@ -706,13 +706,13 @@ If a structural scope creates bindings, stabilize them in this commit before exp
 
 Let `L` be the latest completed logical/document revision, `S` the source-document revision of the adapter's semantic snapshot, and `G(region)` the revision through which that region's geometry dependencies have been validated. Unchanged cached geometry can be certified through `L` without remeasurement. Geometry includes dependent ancestors/siblings, transforms, clips, scrolling, stacking, and host coordinate/scale epochs; “affected region” is a dependency closure, not necessarily one subtree.
 
-| Observer | Required freshness / linearization point | Permitted delay |
-|---|---|---|
-| Document property/structure query on UI actor | Latest completed `L`; never a half-applied plan | None after commit. Source/computed reads within a collecting batch see pending sources; document queries during that batch reject as `transactionInProgress` rather than mixing versions |
-| Document geometry query on UI actor | Synchronously ensure `G(query closure) = L` before returning, including hit-relevant placement dependencies | Can force layout outside a frame; a stale geometry API must be separately named and carry its revision |
-| Pointer hit test / geometric navigation | After preceding commits, ensure `G(target-search closure) = L` before selecting target/path; recheck eligibility/capture against `L` | May wait for synchronous layout, never for GPU presentation; no dispatch using stale scene geometry |
-| Native accessibility query served by Stana's provider | Capture one immutable adapter snapshot at query entry. `S = L` at each completed commit; overlapping queries may finish against the previous complete snapshot. All returned fields/ranges/bounds belong to that captured revision | No synchronous callback hop to the UI actor. Native OS/AT caches and notification delivery can lag; their consumption time is not guaranteed by Stana's snapshot installation |
-| Painting | A complete immutable scene for its tagged document revision, with geometry current for that snapshot and correct damage base | May coalesce/drop intermediate scenes and lag `L`; never use painting to redefine input or semantic state |
+| Observer                                              | Required freshness / linearization point                                                                                                                                                                                           | Permitted delay                                                                                                                                                                          |
+| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Document property/structure query on UI actor         | Latest completed `L`; never a half-applied plan                                                                                                                                                                                    | None after commit. Source/computed reads within a collecting batch see pending sources; document queries during that batch reject as `transactionInProgress` rather than mixing versions |
+| Document geometry query on UI actor                   | Synchronously ensure `G(query closure) = L` before returning, including hit-relevant placement dependencies                                                                                                                        | Can force layout outside a frame; a stale geometry API must be separately named and carry its revision                                                                                   |
+| Pointer hit test / geometric navigation               | After preceding commits, ensure `G(target-search closure) = L` before selecting target/path; recheck eligibility/capture against `L`                                                                                               | May wait for synchronous layout, never for GPU presentation; no dispatch using stale scene geometry                                                                                      |
+| Native accessibility query served by Stana's provider | Capture one immutable adapter snapshot at query entry. `S = L` at each completed commit; overlapping queries may finish against the previous complete snapshot. All returned fields/ranges/bounds belong to that captured revision | No synchronous callback hop to the UI actor. Native OS/AT caches and notification delivery can lag; their consumption time is not guaranteed by Stana's snapshot installation            |
+| Painting                                              | A complete immutable scene for its tagged document revision, with geometry current for that snapshot and correct damage base                                                                                                       | May coalesce/drop intermediate scenes and lag `L`; never use painting to redefine input or semantic state                                                                                |
 
 Installing the Stana-owned adapter query snapshot is part of the synchronous publication boundary, independent of native notification delivery. A bridge that cannot satisfy snapshot consistency/freshness needs a qualified shim or a separately proposed contract change, not an unmeasured asynchronous queue. Providers capture snapshots without holding a lock while waiting for the UI actor (§9.4). Multi-call native query sequences can straddle revisions unless the native protocol supplies a snapshot context; range revisions must still be validated (§10.2).
 
@@ -755,18 +755,18 @@ struct STNDirtyFlags: OptionSet {
 
 ### 7.2 Property-specific consequences
 
-| Property mutation | Required invalidation |
-|---|---|
-| `text` or font change | shape/measure, dependent layout, paint, hit-test/semantic bounds and text data |
-| `backgroundColor` | paint only |
-| `opacity` | paint/compositor only; does not by itself hide a node from focus or semantics |
-| `width`, `padding`, `gap` | measure/layout, subsequent paint/hit-test/semantic bounds |
-| `transform` | paint, hit-test, semantics bounds |
-| `isEnabled` | paint, hit-test, semantics |
-| `accessibilityLabel` | semantics only |
-| Child insert/remove | structural scope + affected parent layout, scene and semantics |
+| Property mutation                            | Required invalidation                                                                                   |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `text` or font change                        | shape/measure, dependent layout, paint, hit-test/semantic bounds and text data                          |
+| `backgroundColor`                            | paint only                                                                                              |
+| `opacity`                                    | paint/compositor only; does not by itself hide a node from focus or semantics                           |
+| `width`, `padding`, `gap`                    | measure/layout, subsequent paint/hit-test/semantic bounds                                               |
+| `transform`                                  | paint, hit-test, semantics bounds                                                                       |
+| `isEnabled`                                  | paint, hit-test, semantics                                                                              |
+| `accessibilityLabel`                         | semantics only                                                                                          |
+| Child insert/remove                          | structural scope + affected parent layout, scene and semantics                                          |
 | Locale, direction, font fallback, text scale | Invalidate dependent environment/style, shaping/measurement, layout, paint, and semantics as applicable |
-| Scroll offset | Viewport transforms, paint, hit-test, semantic bounds; virtual realization if needed |
+| Scroll offset                                | Viewport transforms, paint, hit-test, semantic bounds; virtual realization if needed                    |
 
 Paint invalidation must expand through compositing dependencies (for example, a background seen through translucent children). `paint` identifies stale scene content; damage is the affected output region, and the two are not interchangeable. Pure opacity animation keeps layout caches valid. Use explicit `hidden`/`collapsed`/`inert` policies (§9.5), not opacity as an implicit accessibility switch.
 
@@ -939,11 +939,11 @@ protocol STNPlatformHost {
 
 ### 8.5 Platform targets
 
-| Platform | Native window | Preferred graphics route | Accessibility service |
-|---|---|---|---|
-| macOS | `NSWindow` / `NSView` | Evaluate Metal + raster presentation | AppKit accessibility / VoiceOver |
-| Windows | `HWND` | Verify chosen Skia GPU route (e.g. Vulkan or ANGLE/Direct3D translation) + raster presentation | UI Automation / Narrator and NVDA |
-| Linux | Wayland first; X11 separately qualified | Evaluate Vulkan + raster presentation | AT-SPI / Orca |
+| Platform | Native window                           | Preferred graphics route                                                                       | Accessibility service             |
+| -------- | --------------------------------------- | ---------------------------------------------------------------------------------------------- | --------------------------------- |
+| macOS    | `NSWindow` / `NSView`                   | Evaluate Metal + raster presentation                                                           | AppKit accessibility / VoiceOver  |
+| Windows  | `HWND`                                  | Verify chosen Skia GPU route (e.g. Vulkan or ANGLE/Direct3D translation) + raster presentation | UI Automation / Narrator and NVDA |
+| Linux    | Wayland first; X11 separately qualified | Evaluate Vulkan + raster presentation                                                          | AT-SPI / Orca                     |
 
 SDL3 may reduce host/window/event boilerplate. However, **window integration and accessibility integration are separate problems**: windowing libraries do not automatically make custom-drawn nodes visible to screen readers. Prefer OS-specific host shims where text input, surface setup, or accessibility requires them.
 
@@ -1064,18 +1064,18 @@ Accessibility activation must reach the same command used by keyboard/pointer ac
 
 Publish an initial complete tree, then ordered changes with a revision. Coalesce replaceable state only when the adapter can reconstruct the latest state; preserve action ordering and necessary announcements. Activation after inactivity or a lost update history requires a full-tree resynchronization. Focus/removal notifications reference existing committed elements in the order required by the adapter. Native providers retained after removal return “element unavailable,” not recycled node data.
 
-**Text field release gate:** screen readers must be able to query text, selection, caret, insertion/deletion, secure-input state, IME composition, and character/word navigation. A painted text box with a label is *not* an accessible text field.
+**Text field release gate:** screen readers must be able to query text, selection, caret, insertion/deletion, secure-input state, IME composition, and character/word navigation. A painted text box with a label is _not_ an accessible text field.
 
 ### 9.5 Portable interaction policies
 
-| State/policy | Layout and pixels | Input/focus | Semantic projection |
-|---|---|---|---|
-| `opacity(0)` | Layout retained; transparent | Unchanged unless explicitly disabled/inert | Retained |
-| `hidden` | Layout retained; not painted | No pointer hit or keyboard focus | Excluded; repair focus |
-| `collapsed` | No layout contribution or painting | No interaction | Excluded |
-| `inert` subtree | Painted normally | No user or assistive activation/focus | Map platform unavailable/noninteractive semantics; never expose actionable descendants |
-| Disabled control | Layout retained; disabled style | No activation; v1 keyboard traversal skips it | Retained with disabled state; AT may inspect it |
-| Clipped/offscreen scroll content | Only visible pixels drawn | Visibility-aware hit test; logical focus can scroll into view | Retained/virtualized with correct offscreen state, not arbitrarily deleted |
+| State/policy                     | Layout and pixels                  | Input/focus                                                   | Semantic projection                                                                    |
+| -------------------------------- | ---------------------------------- | ------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `opacity(0)`                     | Layout retained; transparent       | Unchanged unless explicitly disabled/inert                    | Retained                                                                               |
+| `hidden`                         | Layout retained; not painted       | No pointer hit or keyboard focus                              | Excluded; repair focus                                                                 |
+| `collapsed`                      | No layout contribution or painting | No interaction                                                | Excluded                                                                               |
+| `inert` subtree                  | Painted normally                   | No user or assistive activation/focus                         | Map platform unavailable/noninteractive semantics; never expose actionable descendants |
+| Disabled control                 | Layout retained; disabled style    | No activation; v1 keyboard traversal skips it                 | Retained with disabled state; AT may inspect it                                        |
+| Clipped/offscreen scroll content | Only visible pixels drawn          | Visibility-aware hit test; logical focus can scroll into view | Retained/virtualized with correct offscreen state, not arbitrarily deleted             |
 
 Modals establish a focus scope, inert background content, an accessible name, Escape/dismiss policy, and focus restoration to a surviving eligible origin. Accessible names use explicit label/label relationship before component-default visible text; hints do not replace names. Bounds must use the same transforms and clip/visibility decisions as input, converted to each OS's required coordinates.
 
@@ -1157,15 +1157,15 @@ Do not normalize user text silently. Support mixed RTL/LTR, combining marks, emo
 
 An editable node owns committed text, selection anchor/head and affinity, marked/preedit text and selected composition range, undo history, scroll-to-caret state, and an edit revision. Apply each replacement as one edit command, transform/clamp selection using the edit map, then notify bindings and native text services in a defined order. Selection-only changes update caret/selection and semantic ranges without reshaping unchanged text.
 
-| Situation | Required behavior |
-|---|---|
-| IME preedit update | Update marked text and candidate geometry; do not publish it as committed model text by default |
-| IME commit/cancel | Commit one replacement/undo group or discard marked text; never append duplicate key-event characters |
+| Situation                                 | Required behavior                                                                                                                                                  |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| IME preedit update                        | Update marked text and candidate geometry; do not publish it as committed model text by default                                                                    |
+| IME commit/cancel                         | Commit one replacement/undo group or discard marked text; never append duplicate key-event characters                                                              |
 | External binding write during composition | Equal echo is a no-op; a genuinely different value cancels/reset-notifies the native composition first, then replaces text and clamps selection. No implicit merge |
-| Focus transfer/window deactivation | Honor the platform's composition commit/cancel protocol; finish the text-service handshake before detaching the client |
-| Async validation | Tag by edit/request revision and scope; ignore stale results; expose a separate validation state rather than rewriting newer user text |
-| Undo/redo | Group a composition as one edit; document typing/paste boundaries and treat external whole-value replacement as an undo-history reset in v1 |
-| Secure entry | Suppress text in diagnostics, snapshots, clipboard-copy defaults, and accessibility values; expose platform password semantics and allowed selection/actions |
+| Focus transfer/window deactivation        | Honor the platform's composition commit/cancel protocol; finish the text-service handshake before detaching the client                                             |
+| Async validation                          | Tag by edit/request revision and scope; ignore stale results; expose a separate validation state rather than rewriting newer user text                             |
+| Undo/redo                                 | Group a composition as one edit; document typing/paste boundaries and treat external whole-value replacement as an undo-history reset in v1                        |
+| Secure entry                              | Suppress text in diagnostics, snapshots, clipboard-copy defaults, and accessibility values; expose platform password semantics and allowed selection/actions       |
 
 Secure entry is a behavioral policy, not a guarantee of zeroized Swift `String` memory. Place limits on pasted text and surrounding-text payloads without cutting encoded code points; an accessibility/text-service API may still legitimately require richer text access according to its secure-input rules.
 
@@ -1340,19 +1340,19 @@ This is a proposed test API. Add explicit counters for computed recomputations, 
 
 ### 13.2 Benchmarks
 
-| Scenario | Invariant to verify |
-|---|---|
-| One text update in a 10,000-node tree | No remounts and no unrelated builder executions |
-| 100 writes inside one transaction | Each affected consumer evaluated no more than necessary |
-| Update only background color | No text measurements or layout passes |
+| Scenario                                              | Invariant to verify                                                                                                                                      |
+| ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| One text update in a 10,000-node tree                 | No remounts and no unrelated builder executions                                                                                                          |
+| 100 writes inside one transaction                     | Each affected consumer evaluated no more than necessary                                                                                                  |
+| Update only background color                          | No text measurements or layout passes                                                                                                                    |
 | Keyed list reorder / editable sibling-property change | Stable observable-row editor IDs, focus, selection, composition, undo, local state, and task scope; separately measure intentional value-row replacement |
-| Scroll a virtualized 10,000-item list | Bound realization/paint to visible items + overscan; report extent-index and semantic costs separately |
-| Repeated mount/unmount | No accumulated subscriptions or GPU-resource leaks |
-| Resize/high-DPI change | Correct cache invalidation and repaint |
-| Forced full redraw vs incremental redraw | Equivalent pixels for deterministic test fixtures |
-| Accessibility-only label change | Current semantic snapshot without visual repaint; report projection/installation cost |
-| Geometry change with a large semantic tree | Include required layout in synchronous commit latency; report AT-active and AT-inactive costs |
-| Paused/slow renderer with moving controls | Current hit targets/semantic bounds despite old pixels; lag age, barrier cost, and recovery under bounded buffering |
+| Scroll a virtualized 10,000-item list                 | Bound realization/paint to visible items + overscan; report extent-index and semantic costs separately                                                   |
+| Repeated mount/unmount                                | No accumulated subscriptions or GPU-resource leaks                                                                                                       |
+| Resize/high-DPI change                                | Correct cache invalidation and repaint                                                                                                                   |
+| Forced full redraw vs incremental redraw              | Equivalent pixels for deterministic test fixtures                                                                                                        |
+| Accessibility-only label change                       | Current semantic snapshot without visual repaint; report projection/installation cost                                                                    |
+| Geometry change with a large semantic tree            | Include required layout in synchronous commit latency; report AT-active and AT-inactive costs                                                            |
+| Paused/slow renderer with moving controls             | Current hit targets/semantic bounds despite old pixels; lag age, barrier cost, and recovery under bounded buffering                                      |
 
 Avoid hard performance claims until hardware, backend, dataset, DPI, font, and profiling methodology are fixed. As reference, 60 Hz has approximately **16.7 ms** between frames and 120 Hz approximately **8.3 ms**, including work outside Stana.
 
@@ -1367,23 +1367,23 @@ STNDiagnostics.configure(
 )
 ```
 
-Debug tools should answer: *Which signal changed? Which binding ran? Which nodes were measured and painted? What semantic updates were sent? Why did an ancestor relayout?*
+Debug tools should answer: _Which signal changed? Which binding ran? Which nodes were measured and painted? What semantic updates were sent? Why did an ancestor relayout?_
 
 Trace each transaction/frame with window ID, logical/geometry/semantic revisions, interaction epoch, mapped scene/backing-store/presented revisions and surface epoch, input receipt/dispatch timestamps and target ID, phase durations, queue depth, lag age/feedback availability, and cache/resource counters. Split geometry-barrier time, semantic-required layout, projection, snapshot installation, and notification enqueue from deferred visual work; avoid counting the same layout work twice. Distinguish event receipt→commit, receipt→submission, and receipt→presentation feedback. GPU completion is not display presentation; true input-to-photon claims require an appropriate external measurement setup. Instrumentation overhead must be measured and heavy tracing disabled in normal benchmarks.
 
 ### 13.4 Correctness oracles and adversarial cases
 
-| Subsystem | Required verification |
-|---|---|
-| Reactive graph | §6.3 diamond and branch-dependent edge-reversal fixtures in both directions/demand orders; equal-output trace replacement; abandoned-suffix nonvalidation; active/inactive cycles; explicit reads between writes; nested batches; cancellation during queued delivery; effect feedback |
-| Tree/lifetimes | Seeded random append/move/remove vs reference tree; duplicate keys and changed observable-row instance rejection; §3.5 sibling update/reorder preserving editor identity, focus, selection, composition, undo, local state and task tokens; unequal-value-row disposal/reset/cancellation; stale/wrong-document handles; generation exhaustion; parent/child consistency; late async completion after unmount |
-| Layout | Cached incremental vs uncached full measure/place for identical inputs; min/max/unbounded/overflow; RTL/baselines; ancestor intrinsic-size changes; font/environment epoch changes |
-| Scene/damage | Incremental vs full repaint from the same scene/backend; moves/removals/transparency/blur/clips; dropped A→B→C snapshots; unknown buffer history; surface epoch changes |
-| Text | Matching Unicode bidi/segmentation/line-break data; golden shaping/range fixtures; index round-trip properties; revision-stale edits; §10.3 IME corpus; native/AT manual scripts |
-| Accessibility | Initial tree + delta replay equals full semantic projection; relationship integrity; action exactly once; removal/focus order; query overlapping commit sees one old/new complete snapshot; post-commit provider query sees current bounds; hot AT activation |
-| Input/freshness | Forced deferred layout and stalled presentation; old/new-position and overlapping-control clicks; capture/removal; coordinate epochs; current hit-test barrier; dispatch-batch query exception; lag diagnostics and recovery (§6.4) |
-| Concurrency/FFI | Swift 6 diagnostics; appropriate Swift/native address/thread sanitizers where supported; teardown with callbacks in flight; no callbacks after context release |
-| Fault recovery | Inject device loss, failed allocation/decode, zero drawable, resize/scale races, paused renderer, malformed assets, shutdown with GPU work in flight |
+| Subsystem       | Required verification                                                                                                                                                                                                                                                                                                                                                                                         |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Reactive graph  | §6.3 diamond and branch-dependent edge-reversal fixtures in both directions/demand orders; equal-output trace replacement; abandoned-suffix nonvalidation; active/inactive cycles; explicit reads between writes; nested batches; cancellation during queued delivery; effect feedback                                                                                                                        |
+| Tree/lifetimes  | Seeded random append/move/remove vs reference tree; duplicate keys and changed observable-row instance rejection; §3.5 sibling update/reorder preserving editor identity, focus, selection, composition, undo, local state and task tokens; unequal-value-row disposal/reset/cancellation; stale/wrong-document handles; generation exhaustion; parent/child consistency; late async completion after unmount |
+| Layout          | Cached incremental vs uncached full measure/place for identical inputs; min/max/unbounded/overflow; RTL/baselines; ancestor intrinsic-size changes; font/environment epoch changes                                                                                                                                                                                                                            |
+| Scene/damage    | Incremental vs full repaint from the same scene/backend; moves/removals/transparency/blur/clips; dropped A→B→C snapshots; unknown buffer history; surface epoch changes                                                                                                                                                                                                                                       |
+| Text            | Matching Unicode bidi/segmentation/line-break data; golden shaping/range fixtures; index round-trip properties; revision-stale edits; §10.3 IME corpus; native/AT manual scripts                                                                                                                                                                                                                              |
+| Accessibility   | Initial tree + delta replay equals full semantic projection; relationship integrity; action exactly once; removal/focus order; query overlapping commit sees one old/new complete snapshot; post-commit provider query sees current bounds; hot AT activation                                                                                                                                                 |
+| Input/freshness | Forced deferred layout and stalled presentation; old/new-position and overlapping-control clicks; capture/removal; coordinate epochs; current hit-test barrier; dispatch-batch query exception; lag diagnostics and recovery (§6.4)                                                                                                                                                                           |
+| Concurrency/FFI | Swift 6 diagnostics; appropriate Swift/native address/thread sanitizers where supported; teardown with callbacks in flight; no callbacks after context release                                                                                                                                                                                                                                                |
+| Fault recovery  | Inject device loss, failed allocation/decode, zero drawable, resize/scale races, paused renderer, malformed assets, shutdown with GPU work in flight                                                                                                                                                                                                                                                          |
 
 Use seeded generation and save minimal failing mutation/event traces. Reference evaluators must not share the optimized invalidation algorithm they are checking. Pixel comparisons use a deterministic raster backend/font fixture first; GPU/OS-specific baselines need justified tolerances for antialiasing/color differences, not one universal “identical pixels” claim.
 
@@ -1393,24 +1393,24 @@ The from-scratch consistency oracle is an engineering consequence we draw from [
 
 **Provisional engineering targets, not results:** freeze a representative desktop machine per qualified platform and the fixture manifest at M0. Record any target change in an ADR before interpreting a release run. Beta/1.0 cannot claim a passed target while its machine or fixture is unspecified.
 
-| Metric/fixture | Initial acceptance target |
-|---|---|
-| One bound color update in a warm 10,000-node tree | Zero remounts, builder reruns, measure calls, and layout passes; only required scene/damage work |
-| Batch of 100 writes feeding one diamond graph, no intermediate read | One final publication; each demanded computed evaluated at most once during commit |
-| Warm local-update fixture: UI logical commit (including semantic-required layout/projection/installation) + remaining visual layout/recording | p95 ≤ 4 ms at a 60 Hz target, ≤ 2 ms at a 120 Hz target, excluding GPU/OS work; report p99/max too |
-| Same fixture: event receipt→presentation feedback | p95 ≤ two target refresh intervals when host feedback is available; label submission-only proxies explicitly |
-| Renderer backlog | At most negotiated in-flight submissions + one pending complete scene; zero unbounded growth under a deliberately slow renderer |
-| 10,000 mount/unmount cycles after warm-up | Live node/subscription/task/lease counters return to baseline after drain; process memory reaches a documented cache plateau rather than growing with cycle count |
-| Idle visible window with no caret blink/animation/input | Zero engine-requested continuous redraws after pending invalidation is drained |
+| Metric/fixture                                                                                                                                | Initial acceptance target                                                                                                                                         |
+| --------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| One bound color update in a warm 10,000-node tree                                                                                             | Zero remounts, builder reruns, measure calls, and layout passes; only required scene/damage work                                                                  |
+| Batch of 100 writes feeding one diamond graph, no intermediate read                                                                           | One final publication; each demanded computed evaluated at most once during commit                                                                                |
+| Warm local-update fixture: UI logical commit (including semantic-required layout/projection/installation) + remaining visual layout/recording | p95 ≤ 4 ms at a 60 Hz target, ≤ 2 ms at a 120 Hz target, excluding GPU/OS work; report p99/max too                                                                |
+| Same fixture: event receipt→presentation feedback                                                                                             | p95 ≤ two target refresh intervals when host feedback is available; label submission-only proxies explicitly                                                      |
+| Renderer backlog                                                                                                                              | At most negotiated in-flight submissions + one pending complete scene; zero unbounded growth under a deliberately slow renderer                                   |
+| 10,000 mount/unmount cycles after warm-up                                                                                                     | Live node/subscription/task/lease counters return to baseline after drain; process memory reaches a documented cache plateau rather than growing with cycle count |
+| Idle visible window with no caret blink/animation/input                                                                                       | Zero engine-requested continuous redraws after pending invalidation is drained                                                                                    |
 
 The timing fixture changes one leaf without intrinsic-size propagation; add separate expensive text, resize, scrolling, high-fanout, and worst-case layout fixtures. Do not generalize the local-update target to every 10,000-node operation. Node-storage benchmarks compare class/arena implementations with equal payloads, semantics, and compiler settings.
 
 #### 13.5.1 Two evaluation layers
 
-| Evaluation | Question / evidence | What it does not establish |
-|---|---|---|
-| Release qualification | Does the pinned implementation meet its fixture budgets and avoid regressions? Compare to its pinned release baseline; report uncertainty around timings and threshold decisions | That this architecture is superior to other architectures |
-| Research evaluation | Does the design improve outcomes relative to alternatives, on which workloads, and through which mechanisms? Use matched comparisons, ablations, and effect-size intervals | Universal superiority, or usability from performance alone |
+| Evaluation            | Question / evidence                                                                                                                                                              | What it does not establish                                 |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| Release qualification | Does the pinned implementation meet its fixture budgets and avoid regressions? Compare to its pinned release baseline; report uncertainty around timings and threshold decisions | That this architecture is superior to other architectures  |
+| Research evaluation   | Does the design improve outcomes relative to alternatives, on which workloads, and through which mechanisms? Use matched comparisons, ablations, and effect-size intervals       | Universal superiority, or usability from performance alone |
 
 Deterministic invariants (zero remounts, bounded queues, correct output) are direct gates. Timing qualification uses the predeclared workload estimand and a one-sided 95% upper confidence bound against its budget: pass only if the bound is within budget; if the interval crosses the budget, report **inconclusive**, not pass. Apply a declared multiplicity policy for a family of timing gates. Retain per-run distributions and failures. Investigate a >10% p95 regression in a relevant phase or a new memory-growth slope even when absolute budgets still pass; a noisy point estimate is an investigation trigger, not proof of regression.
 
@@ -1426,7 +1426,7 @@ For each run record commit, build/binary identity, compiler/native revisions and
 6. **Report comparative uncertainty.** Report absolute timing distributions and 95% confidence intervals for the predeclared difference/ratio, including p95 effects when claimed. Do not substitute a CI for the mean, an average of per-run p95s, or a ratio of those averages for a pooled-event p95 unless that is explicitly the estimand. Show practical-effect thresholds, negative results, outliers, dropped frames, and missing/censored presentation observations; absence of feedback must not become zero latency. Claims spanning several fixtures must use a declared multiple-comparison policy or be labeled exploratory.
 7. **Justify tails separately.** Publish run/event counts, duration, effective independent units/blocks, observed exceedances, and interval widths/coverage rationale for each tail claim. Under an IID approximation, 1,000 samples yield only about ten observations above p99; correlation can make evidence weaker. That count does not validate a p99 improvement. Size tail experiments by pilot/simulation or suitable dependent-data/order-statistic analysis for the target precision, include burst/stress traces, and validate interval sensitivity. Report p99/max descriptively when precision is inadequate; max is an observed extreme, not an estimated worst-case bound.
 
-[Kalibera and Jones, *Rigorous Benchmarking in Reasonable Time* (ISMM 2013; corrected author manuscript)](https://kar.kent.ac.uk/33611/) motivates allocating repetition across sources of variation and reporting effect-size confidence intervals. Its execution-time methodology is not automatically a UI percentile estimator. The clustered, paced, tail-specific protocol above is a Stana requirement whose assumptions and analysis must be justified for the collected data.
+[Kalibera and Jones, _Rigorous Benchmarking in Reasonable Time_ (ISMM 2013; corrected author manuscript)](https://kar.kent.ac.uk/33611/) motivates allocating repetition across sources of variation and reporting effect-size confidence intervals. Its execution-time methodology is not automatically a UI percentile estimator. The clustered, paced, tail-specific protocol above is a Stana requirement whose assumptions and analysis must be justified for the collected data.
 
 #### 13.5.3 Comparative research matrix and semantic cost
 
@@ -1457,15 +1457,15 @@ Attach the test results, fixtures, support matrix, known limitations, raw benchm
 
 Stages are dependency gates, not calendar estimates. Owners below are implementation roles; actual maintainers and supported OS/toolchain versions must be assigned at M0.
 
-| Stage | Deliverable / responsible role | Required evidence to exit |
-|---|---|---|
-| **M0 — Feasibility** | Platform/graphics/accessibility owners: pin toolchains/dependencies, first host loop and raster path, one accessible button; spike remaining target OSes | Native async wake-up, draw/resize, AT discovery/activation, composition feasibility and clean build on first host; recorded build/host/adapter findings for every intended OS; explicit stop/go ADRs |
-| **M1 — Retained core** | Core/layout owners: opaque IDs, class storage, scopes, signals/computeds/transactions, box/stacks/text, basic `If` and keyed `ForEach` | Ordered-validation/edge-reversal fixtures (§6.3), graph/transaction/reference-tree tests; no parent builder reruns on leaf binding updates; conditional/list disposal and stale-result checks; deterministic headless host |
-| **M2 — Interaction and semantics** | Input/accessibility owners: buttons, toggles, focus, semantic projection, host adapters | Per-advertised-platform keyboard and AT scripts; action exactly once, delta replay, focus/removal/modal tests, freshness barriers and delayed-presentation dispatch; accessibility available before GPU optimization |
-| **M3 — Text and scrolling** | Text/platform owners: shaped paragraphs, scroll, single-line editing, text services and AT editing | §10.3 corpus and matching Unicode tests; range conversions, secure input, undo, clipboard, external updates during composition; observable-row sibling/reorder identity/composition preservation (§3.5); native-field fallback if explicitly selected |
-| **M4 — Rendering and resilience** | Graphics/release owners: qualified GPU routes, damage/caches, resource budgets, native packaging | Raster/incremental parity, dropped-frame damage, loss/resize/close tests, bounded queue/memory soak, clean-machine artifact installation |
-| **M5 — Scale and extensibility** | Component/tooling owners: custom-component APIs (§18), virtualization, themes, selected animation | External sample custom controls with state/input/semantics/disposal; large-list navigation and AT realization; controlled benchmark reports with uncertainty (§13.5), formative developer tasks (§18.8) and disabled-user task evaluation (§9.7); profiling justifies optimizations |
-| **M6 — 1.0 qualification** | Release maintainer with subsystem owners | Every advertised capability passes its matrix; public examples compile; API migration/support docs, dependency manifest, release evidence and unresolved-issue disposition published |
+| Stage                              | Deliverable / responsible role                                                                                                                           | Required evidence to exit                                                                                                                                                                                                                                                           |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **M0 — Feasibility**               | Platform/graphics/accessibility owners: pin toolchains/dependencies, first host loop and raster path, one accessible button; spike remaining target OSes | Native async wake-up, draw/resize, AT discovery/activation, composition feasibility and clean build on first host; recorded build/host/adapter findings for every intended OS; explicit stop/go ADRs                                                                                |
+| **M1 — Retained core**             | Core/layout owners: opaque IDs, class storage, scopes, signals/computeds/transactions, box/stacks/text, basic `If` and keyed `ForEach`                   | Ordered-validation/edge-reversal fixtures (§6.3), graph/transaction/reference-tree tests; no parent builder reruns on leaf binding updates; conditional/list disposal and stale-result checks; deterministic headless host                                                          |
+| **M2 — Interaction and semantics** | Input/accessibility owners: buttons, toggles, focus, semantic projection, host adapters                                                                  | Per-advertised-platform keyboard and AT scripts; action exactly once, delta replay, focus/removal/modal tests, freshness barriers and delayed-presentation dispatch; accessibility available before GPU optimization                                                                |
+| **M3 — Text and scrolling**        | Text/platform owners: shaped paragraphs, scroll, single-line editing, text services and AT editing                                                       | §10.3 corpus and matching Unicode tests; range conversions, secure input, undo, clipboard, external updates during composition; observable-row sibling/reorder identity/composition preservation (§3.5); native-field fallback if explicitly selected                               |
+| **M4 — Rendering and resilience**  | Graphics/release owners: qualified GPU routes, damage/caches, resource budgets, native packaging                                                         | Raster/incremental parity, dropped-frame damage, loss/resize/close tests, bounded queue/memory soak, clean-machine artifact installation                                                                                                                                            |
+| **M5 — Scale and extensibility**   | Component/tooling owners: custom-component APIs (§18), virtualization, themes, selected animation                                                        | External sample custom controls with state/input/semantics/disposal; large-list navigation and AT realization; controlled benchmark reports with uncertainty (§13.5), formative developer tasks (§18.8) and disabled-user task evaluation (§9.7); profiling justifies optimizations |
+| **M6 — 1.0 qualification**         | Release maintainer with subsystem owners                                                                                                                 | Every advertised capability passes its matrix; public examples compile; API migration/support docs, dependency manifest, release evidence and unresolved-issue disposition published                                                                                                |
 
 **Smallest useful vertical slice:** one native window with a shaped label and accessible counter button; a click/keyboard/AT action updates the existing label without remounting; resize and close leave no live subscriptions, callbacks, or frame leases. Complete this before expanding the widget catalogue.
 
@@ -1481,21 +1481,21 @@ The matrix records OS/version/architecture, Swift toolchain, renderer/backend, w
 
 ## 15. Trade-offs and operational risks
 
-| Risk / trade-off | Failure signal | Mitigation and deciding evidence |
-|---|---|---|
-| Class records vs arena | Allocation/ARC dominates measured mount/update profiles | Start simple; compare equivalent workloads before storage migration; preserve opaque IDs |
-| Fine-grained graph bookkeeping | Edge visits/caches cost more than recomputation, or dependencies leak | Demand-driven evaluation, scope cleanup, fanout/branch-switch benchmarks, graph vs reference tests |
-| Keyed scope identity | Duplicate keys, stale captured row values, focus moving to the wrong item | Validate plans before mutation; explicit value-row vs observable-row semantics (§3.5) |
-| Native host/Swift integration | Async tasks or IME/AT callbacks stall in resize/modal loops | M0 host-loop spike on each intended OS; no assumptions from macOS behavior |
-| Custom-painted text fields | Composition/selection or screen-reader text navigation fails | M3 is a release gate; qualified native-field fallback or withhold unsupported capability |
-| Skia/native build footprint | Backend unavailable, binary too large, unreproducible artifacts | Pinned build spike, CPU presentation path, measured package size; retain adapter boundary |
-| AccessKit capability mismatch | Required pattern/property/action unavailable in pinned bindings | Minimal custom-control/text spike; contribute/fix upstream or add isolated native shim |
-| Incorrect partial repaint | Ghost pixels after move/removal/dropped frames | Backing-store revision and surface epoch tracking; differential full redraw; safe full-repaint fallback |
-| GPU resource lifetime | Use-after-free, leak, device-loss/close hang | Frame leases, completion fences, bounded queues, fault-injection and teardown soak |
-| Virtualization vs semantics | AT cannot discover/focus unrealized items | Logical metadata plus bounded realization; test large-list AT navigation before release |
-| Cross-platform typography | Snapshot/selection drift after font/OS update | Font/database epochs, pinned deterministic fixtures, platform-specific qualification |
-| API complexity | Stale builder reads, row resets, lifetime/token errors, or costly debugging despite a public API | Composition-first guide (§18), external samples plus formative error/debugging evidence (§18.8), narrow advanced SPI |
-| Freshness vs frame coalescing | Synchronous semantic geometry consumes commit budget; old pixels invite unintended activation | Explicit observer/input contracts (§6.4), lag diagnostics, semantic-cost benchmarks and disabled-user tasks; no claim that all layout is frame-only |
+| Risk / trade-off               | Failure signal                                                                                   | Mitigation and deciding evidence                                                                                                                    |
+| ------------------------------ | ------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Class records vs arena         | Allocation/ARC dominates measured mount/update profiles                                          | Start simple; compare equivalent workloads before storage migration; preserve opaque IDs                                                            |
+| Fine-grained graph bookkeeping | Edge visits/caches cost more than recomputation, or dependencies leak                            | Demand-driven evaluation, scope cleanup, fanout/branch-switch benchmarks, graph vs reference tests                                                  |
+| Keyed scope identity           | Duplicate keys, stale captured row values, focus moving to the wrong item                        | Validate plans before mutation; explicit value-row vs observable-row semantics (§3.5)                                                               |
+| Native host/Swift integration  | Async tasks or IME/AT callbacks stall in resize/modal loops                                      | M0 host-loop spike on each intended OS; no assumptions from macOS behavior                                                                          |
+| Custom-painted text fields     | Composition/selection or screen-reader text navigation fails                                     | M3 is a release gate; qualified native-field fallback or withhold unsupported capability                                                            |
+| Skia/native build footprint    | Backend unavailable, binary too large, unreproducible artifacts                                  | Pinned build spike, CPU presentation path, measured package size; retain adapter boundary                                                           |
+| AccessKit capability mismatch  | Required pattern/property/action unavailable in pinned bindings                                  | Minimal custom-control/text spike; contribute/fix upstream or add isolated native shim                                                              |
+| Incorrect partial repaint      | Ghost pixels after move/removal/dropped frames                                                   | Backing-store revision and surface epoch tracking; differential full redraw; safe full-repaint fallback                                             |
+| GPU resource lifetime          | Use-after-free, leak, device-loss/close hang                                                     | Frame leases, completion fences, bounded queues, fault-injection and teardown soak                                                                  |
+| Virtualization vs semantics    | AT cannot discover/focus unrealized items                                                        | Logical metadata plus bounded realization; test large-list AT navigation before release                                                             |
+| Cross-platform typography      | Snapshot/selection drift after font/OS update                                                    | Font/database epochs, pinned deterministic fixtures, platform-specific qualification                                                                |
+| API complexity                 | Stale builder reads, row resets, lifetime/token errors, or costly debugging despite a public API | Composition-first guide (§18), external samples plus formative error/debugging evidence (§18.8), narrow advanced SPI                                |
+| Freshness vs frame coalescing  | Synchronous semantic geometry consumes commit budget; old pixels invite unintended activation    | Explicit observer/input contracts (§6.4), lag diagnostics, semantic-cost benchmarks and disabled-user tasks; no claim that all layout is frame-only |
 
 Fallbacks must preserve observable semantics and be diagnosable. “It draws” is insufficient evidence for a control's production support.
 
@@ -1505,18 +1505,18 @@ Fallbacks must preserve observable semantics and be diagnosable. “It draws” 
 
 Defaults below are proposed architectural decisions, not completed ADR approvals. Resolve blockers with experiments before freezing dependent APIs. The document can proceed without asking the user to decide every implementation detail now.
 
-| ADR | Default / status | Experiment or criterion that resolves it |
-|---|---|---|
-| **001 — Host/release scope** | Desktop first; first reference host macOS; Windows/Linux target qualification independently | Pin minimum OS, architectures, Swift patch/settings, CI hardware, and native loop integration at M0; no versions implied by `Swift 6+` |
-| **002 — Graphics integration** | Evaluate pinned Skia via Stana-owned C ABI, raster first; GPU selection open | Render text/clip/transparency, resize, present, device loss, and source/binary build on each target; record chosen backend family, dependency size and licenses |
-| **003 — Accessibility adapter** | Prefer pinned AccessKit/C release pair; unvalidated | End-to-end button + editable field + hot AT activation + teardown; record missing native capabilities and shim strategy |
-| **004 — Text stack** | One paragraph/layout/editing abstraction; backend open | Compare qualified SkParagraph/shaping/Unicode stack with native engines for index mappings, fallback, bidi, IME and AT requirements; no “Skia draws text” shortcut |
-| **005 — Storage** | Class records for M1; arena deferred | Benchmark allocation, retained bytes, mount/update p95, and iteration costs with identical content/lifetimes; migrate only for demonstrated benefit |
-| **006 — Reactive implementation** | Explicit signal/computed/transaction semantics in §6; backend replaceable | Prototype against reference graph. Evaluate Swift Observation/transactional observation as an implementation aid, but require identical scheduling, disposal, equality, and synchronous commit semantics; native observation alone is not the API contract |
-| **007 — Layout scope** | Box/stacks/overlay/scroll first; grid/virtualization staged | Differential measure/place tests and dependency/invalidation rules before adding algorithms |
-| **008 — Component extension** | Composition-first public protocol; advanced layout/paint/input SPI experimental | Implement §18 examples outside the core target; no access to mutable records/renderer internals; semantics and disposal verified |
-| **009 — Theme/native integration** | Stana-themed controls, inherited environment, native interaction conventions | Light/dark/high-contrast/reduced-motion/text-scale/RTL review. Resolve theme tokens without invalidating unrelated geometry |
-| **010 — Packaging/API stability** | Source-distributed SwiftPM targets, independently versioned native shim; no plugin ABI promise | Clean-machine installs on qualified targets, reproducible manifest, notices/signing/runtime coverage; explicitly document breaking changes |
+| ADR                                | Default / status                                                                               | Experiment or criterion that resolves it                                                                                                                                                                                                                   |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **001 — Host/release scope**       | Desktop first; first reference host macOS; Windows/Linux target qualification independently    | Pin minimum OS, architectures, Swift patch/settings, CI hardware, and native loop integration at M0; no versions implied by `Swift 6+`                                                                                                                     |
+| **002 — Graphics integration**     | Evaluate pinned Skia via Stana-owned C ABI, raster first; GPU selection open                   | Render text/clip/transparency, resize, present, device loss, and source/binary build on each target; record chosen backend family, dependency size and licenses                                                                                            |
+| **003 — Accessibility adapter**    | Prefer pinned AccessKit/C release pair; unvalidated                                            | End-to-end button + editable field + hot AT activation + teardown; record missing native capabilities and shim strategy                                                                                                                                    |
+| **004 — Text stack**               | One paragraph/layout/editing abstraction; backend open                                         | Compare qualified SkParagraph/shaping/Unicode stack with native engines for index mappings, fallback, bidi, IME and AT requirements; no “Skia draws text” shortcut                                                                                         |
+| **005 — Storage**                  | Class records for M1; arena deferred                                                           | Benchmark allocation, retained bytes, mount/update p95, and iteration costs with identical content/lifetimes; migrate only for demonstrated benefit                                                                                                        |
+| **006 — Reactive implementation**  | Explicit signal/computed/transaction semantics in §6; backend replaceable                      | Prototype against reference graph. Evaluate Swift Observation/transactional observation as an implementation aid, but require identical scheduling, disposal, equality, and synchronous commit semantics; native observation alone is not the API contract |
+| **007 — Layout scope**             | Box/stacks/overlay/scroll first; grid/virtualization staged                                    | Differential measure/place tests and dependency/invalidation rules before adding algorithms                                                                                                                                                                |
+| **008 — Component extension**      | Composition-first public protocol; advanced layout/paint/input SPI experimental                | Implement §18 examples outside the core target; no access to mutable records/renderer internals; semantics and disposal verified                                                                                                                           |
+| **009 — Theme/native integration** | Stana-themed controls, inherited environment, native interaction conventions                   | Light/dark/high-contrast/reduced-motion/text-scale/RTL review. Resolve theme tokens without invalidating unrelated geometry                                                                                                                                |
+| **010 — Packaging/API stability**  | Source-distributed SwiftPM targets, independently versioned native shim; no plugin ABI promise | Clean-machine installs on qualified targets, reproducible manifest, notices/signing/runtime coverage; explicitly document breaking changes                                                                                                                 |
 
 Swift's evolving observation and isolation APIs are worth evaluating, but adopting a new language feature does not waive Stana's contracts. The [Swift 6.2 release notes](https://www.swift.org/blog/swift-6.2-released/) document transactional observations and concurrency changes; exact portability and suitability must be tested with the pinned toolchain.
 
@@ -1528,41 +1528,41 @@ Swift's evolving observation and isolation APIs are worth evaluating, but adopti
 
 ### 17.1 Research-to-design mapping
 
-| Research | Relevant result or concept | Stana application / limit |
-|---|---|---|
-| [Acar et al., *An Experimental Analysis of Self-Adjusting Computation*, PLDI 2006](https://www.cs.cmu.edu/~blelloch/papers/ABBT06.pdf) | Dynamic dependencies/memoization have update benefits and initial-run/bookkeeping costs | Benchmark both construction and updates; do not borrow its speedup numbers for UI workloads |
-| [Acar, Blume, Donham, *A Consistent Semantics of Self-Adjusting Computation*, ESOP 2007; full version 2011](https://arxiv.org/abs/1106.0478) | Formal correctness/consistency of a particular change-propagation semantics | Motivate from-scratch equivalence oracles; the paper does not verify Stana's runtime |
-| [Hammer et al., *Adapton: Composable, Demand-Driven Incremental Computation*, PLDI 2014, §5/Algorithm 1](https://matthewhammer.org/adapton/adapton-pldi2014.pdf) | Ordered dependency checks; first inconsistency triggers outgoing-edge removal and reevaluation | §6.3 ordered validation and edge-reversal fixtures; Stana phase/token/fault policy requires its own verification |
-| [Anderson et al., *Efficient Parallel Self-Adjusting Computation*, 2021](https://arxiv.org/abs/2105.06712) | Parallel change propagation with system-specific work/span analysis | Parallelism is a measured future option, not a reason to abandon single-writer correctness |
-| [Bahr and Møgelberg, *Asynchronous Modal FRP*, 2023](https://arxiv.org/abs/2303.03170) | Operational guarantees for causality/productivity/space behavior in a modal FRP language | Treat lifetime, clock/event distinctions and retention as explicit contracts; ARC does not inherit the paper's type-theoretic guarantees |
-| [Kalibera and Jones, *Rigorous Benchmarking in Reasonable Time*, ISMM 2013, corrected manuscript](https://kar.kent.ac.uk/33611/) | Repetition across variation levels; effect-size confidence intervals | §13.5 separates qualification/research; dependent UI latency tails need additional analysis, not direct reuse of throughput formulas |
-| [Green and Blackwell, *Cognitive Dimensions of Information Artefacts: a Tutorial*, 1998](https://www.cl.cam.ac.uk/~afb21/CognitiveDimensions/CDtutorial.pdf) | Vocabulary for hidden dependencies, visibility, and error-proneness | §18.8 formative developer tasks; a discussion framework, not proof of ergonomic quality |
+| Research                                                                                                                                                         | Relevant result or concept                                                                     | Stana application / limit                                                                                                                |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| [Acar et al., _An Experimental Analysis of Self-Adjusting Computation_, PLDI 2006](https://www.cs.cmu.edu/~blelloch/papers/ABBT06.pdf)                           | Dynamic dependencies/memoization have update benefits and initial-run/bookkeeping costs        | Benchmark both construction and updates; do not borrow its speedup numbers for UI workloads                                              |
+| [Acar, Blume, Donham, _A Consistent Semantics of Self-Adjusting Computation_, ESOP 2007; full version 2011](https://arxiv.org/abs/1106.0478)                     | Formal correctness/consistency of a particular change-propagation semantics                    | Motivate from-scratch equivalence oracles; the paper does not verify Stana's runtime                                                     |
+| [Hammer et al., _Adapton: Composable, Demand-Driven Incremental Computation_, PLDI 2014, §5/Algorithm 1](https://matthewhammer.org/adapton/adapton-pldi2014.pdf) | Ordered dependency checks; first inconsistency triggers outgoing-edge removal and reevaluation | §6.3 ordered validation and edge-reversal fixtures; Stana phase/token/fault policy requires its own verification                         |
+| [Anderson et al., _Efficient Parallel Self-Adjusting Computation_, 2021](https://arxiv.org/abs/2105.06712)                                                       | Parallel change propagation with system-specific work/span analysis                            | Parallelism is a measured future option, not a reason to abandon single-writer correctness                                               |
+| [Bahr and Møgelberg, _Asynchronous Modal FRP_, 2023](https://arxiv.org/abs/2303.03170)                                                                           | Operational guarantees for causality/productivity/space behavior in a modal FRP language       | Treat lifetime, clock/event distinctions and retention as explicit contracts; ARC does not inherit the paper's type-theoretic guarantees |
+| [Kalibera and Jones, _Rigorous Benchmarking in Reasonable Time_, ISMM 2013, corrected manuscript](https://kar.kent.ac.uk/33611/)                                 | Repetition across variation levels; effect-size confidence intervals                           | §13.5 separates qualification/research; dependent UI latency tails need additional analysis, not direct reuse of throughput formulas     |
+| [Green and Blackwell, _Cognitive Dimensions of Information Artefacts: a Tutorial_, 1998](https://www.cl.cam.ac.uk/~afb21/CognitiveDimensions/CDtutorial.pdf)     | Vocabulary for hidden dependencies, visibility, and error-proneness                            | §18.8 formative developer tasks; a discussion framework, not proof of ergonomic quality                                                  |
 
 These papers support reasoning and test design. They do not establish that retained-mode signals universally outperform other UI architectures or that a custom renderer is necessarily faster than native controls.
 
 ### 17.2 Maintained implementation references
 
-| Primary source | Used for |
-|---|---|
-| [Swift concurrency language guide](https://docs.swift.org/swift-book/LanguageGuide/Concurrency.html) | Actor isolation, suspension, and `Sendable` boundary concepts |
-| [Swift 6.2 release notes — 2025-09-15](https://www.swift.org/blog/swift-6.2-released/) | Default isolation options, `@concurrent`, transactional observations, and safe low-level feature evaluation; not a claim that 6.2 is the latest release |
-| [Swift platform support](https://www.swift.org/platform-support/) | Toolchain/platform capability baseline, distinct from Stana host qualification |
-| [Skia surface creation](https://skia.org/docs/user/api/skcanvas_creation/) | Raster/GPU surfaces and client-owned context integration |
-| [AccessKit upstream architecture/adapters](https://github.com/AccessKit/accesskit) | Push-based semantic updates, actions, adapter capability boundaries |
-| [AccessKit C bindings](https://github.com/AccessKit/accesskit-c) | Swift-facing FFI integration candidate and native build requirements |
-| [SDL3 event polling](https://wiki.libsdl.org/SDL3/SDL_PollEvent) | Event-loop and thread-affinity requirements when choosing SDL |
-| [SDL3 text input](https://wiki.libsdl.org/SDL3/SDL_StartTextInput) | Separate committed/composition events and activation lifecycle |
-| [Unicode UAX #29 — Text Segmentation](https://www.unicode.org/reports/tr29/) | Grapheme/word boundaries and matching-version conformance testing |
-| [Unicode UAX #9 — Bidirectional Algorithm](https://www.unicode.org/reports/tr9/) | Logical/visual ordering and bidi test data |
-| [Unicode UAX #14 — Line Breaking](https://www.unicode.org/reports/tr14/) | Break opportunities, distinct from paragraph width fitting |
-| [HarfBuzz shaping clusters](https://harfbuzz.github.io/clusters.html) | Source-to-glyph mappings; clusters are not graphemes |
-| [Apple Cocoa Text Architecture: Text Editing](https://developer.apple.com/library/archive/documentation/TextFonts/Conceptual/CocoaTextArchitecture/TextEditing/TextEditing.html) | Foundational input-context/marked-text/command model; archived documentation, validate concrete APIs against the shipping SDK |
-| [Microsoft Text Services Framework](https://learn.microsoft.com/en-us/windows/desktop/TSF/text-services-framework) | Advanced Win32 text-input integration baseline |
-| [Microsoft UI Automation threading](https://learn.microsoft.com/en-us/windows/win32/winauto/uiauto-threading) | Client/inspection threading hazards; not a provider implementation prescription |
-| [W3C WCAG2ICT](https://www.w3.org/TR/wcag2ict/) | Informative application of accessibility principles to non-web software; not usability evidence |
-| [W3C WAI: Involving Users in Evaluating Web Accessibility](https://www.w3.org/WAI/test-evaluate/involving-users/) | Complement technical checks with disabled-user evaluation; native task protocol is Stana's adaptation (§9.7) |
-| [Qt QML property bindings](https://doc.qt.io/qt-6/qtqml-syntax-propertybinding.html) | Close reactive desktop alternative and candidate matched comparator; pin a release for experiments |
-| [Apple: Demystify SwiftUI, WWDC21](https://developer.apple.com/videos/play/wwdc2021/10022/) | Identity/lifetime/dependency comparison without equating view-value reevaluation to control remounting |
+| Primary source                                                                                                                                                                   | Used for                                                                                                                                                |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Swift concurrency language guide](https://docs.swift.org/swift-book/LanguageGuide/Concurrency.html)                                                                             | Actor isolation, suspension, and `Sendable` boundary concepts                                                                                           |
+| [Swift 6.2 release notes — 2025-09-15](https://www.swift.org/blog/swift-6.2-released/)                                                                                           | Default isolation options, `@concurrent`, transactional observations, and safe low-level feature evaluation; not a claim that 6.2 is the latest release |
+| [Swift platform support](https://www.swift.org/platform-support/)                                                                                                                | Toolchain/platform capability baseline, distinct from Stana host qualification                                                                          |
+| [Skia surface creation](https://skia.org/docs/user/api/skcanvas_creation/)                                                                                                       | Raster/GPU surfaces and client-owned context integration                                                                                                |
+| [AccessKit upstream architecture/adapters](https://github.com/AccessKit/accesskit)                                                                                               | Push-based semantic updates, actions, adapter capability boundaries                                                                                     |
+| [AccessKit C bindings](https://github.com/AccessKit/accesskit-c)                                                                                                                 | Swift-facing FFI integration candidate and native build requirements                                                                                    |
+| [SDL3 event polling](https://wiki.libsdl.org/SDL3/SDL_PollEvent)                                                                                                                 | Event-loop and thread-affinity requirements when choosing SDL                                                                                           |
+| [SDL3 text input](https://wiki.libsdl.org/SDL3/SDL_StartTextInput)                                                                                                               | Separate committed/composition events and activation lifecycle                                                                                          |
+| [Unicode UAX #29 — Text Segmentation](https://www.unicode.org/reports/tr29/)                                                                                                     | Grapheme/word boundaries and matching-version conformance testing                                                                                       |
+| [Unicode UAX #9 — Bidirectional Algorithm](https://www.unicode.org/reports/tr9/)                                                                                                 | Logical/visual ordering and bidi test data                                                                                                              |
+| [Unicode UAX #14 — Line Breaking](https://www.unicode.org/reports/tr14/)                                                                                                         | Break opportunities, distinct from paragraph width fitting                                                                                              |
+| [HarfBuzz shaping clusters](https://harfbuzz.github.io/clusters.html)                                                                                                            | Source-to-glyph mappings; clusters are not graphemes                                                                                                    |
+| [Apple Cocoa Text Architecture: Text Editing](https://developer.apple.com/library/archive/documentation/TextFonts/Conceptual/CocoaTextArchitecture/TextEditing/TextEditing.html) | Foundational input-context/marked-text/command model; archived documentation, validate concrete APIs against the shipping SDK                           |
+| [Microsoft Text Services Framework](https://learn.microsoft.com/en-us/windows/desktop/TSF/text-services-framework)                                                               | Advanced Win32 text-input integration baseline                                                                                                          |
+| [Microsoft UI Automation threading](https://learn.microsoft.com/en-us/windows/win32/winauto/uiauto-threading)                                                                    | Client/inspection threading hazards; not a provider implementation prescription                                                                         |
+| [W3C WCAG2ICT](https://www.w3.org/TR/wcag2ict/)                                                                                                                                  | Informative application of accessibility principles to non-web software; not usability evidence                                                         |
+| [W3C WAI: Involving Users in Evaluating Web Accessibility](https://www.w3.org/WAI/test-evaluate/involving-users/)                                                                | Complement technical checks with disabled-user evaluation; native task protocol is Stana's adaptation (§9.7)                                            |
+| [Qt QML property bindings](https://doc.qt.io/qt-6/qtqml-syntax-propertybinding.html)                                                                                             | Close reactive desktop alternative and candidate matched comparator; pin a release for experiments                                                      |
+| [Apple: Demystify SwiftUI, WWDC21](https://developer.apple.com/videos/play/wwdc2021/10022/)                                                                                      | Identity/lifetime/dependency comparison without equating view-value reevaluation to control remounting                                                  |
 
 ## 18. End-user guide: implementing custom components
 
@@ -1586,14 +1586,14 @@ Built-in primitives provide engine-defined terminal implementations. User compon
 
 Custom components follow the same property rules as built-ins (§3.0): declare a component-specific nested `Properties`, accept it through `init(properties:)`, and put configuration/bindings/callbacks there. The composition protocol does not impose a universal property bag or require access to internal node records. Defaults and any typed reactive overloads belong to the component author. Scope-owned state and context capabilities are runtime resources, not public configuration inputs:
 
-| Component input | Appropriate representation | Behavior after mount |
-|---|---|---|
-| Immutable title/configuration | Plain value (`String`, enum, configuration struct) | Captured for that mount; not automatically reactive |
-| Read-only changing content | `STNComputed<Value>` or signal overload | Bind directly to child properties |
-| Editable application state | `STNBinding<Value>` | Child edits write the application's model |
-| Local UI state | `stnContext.state(initial:)` | Owned by this mounted scope, disposed with it |
-| User action | `@MainActor` callback | Invoked by normal input/AT command path, never by painting |
-| Conditional children / collections | `STNIf` / `STNForEach` | Explicit localized structural updates; stable-key rules apply |
+| Component input                    | Appropriate representation                         | Behavior after mount                                          |
+| ---------------------------------- | -------------------------------------------------- | ------------------------------------------------------------- |
+| Immutable title/configuration      | Plain value (`String`, enum, configuration struct) | Captured for that mount; not automatically reactive           |
+| Read-only changing content         | `STNComputed<Value>` or signal overload            | Bind directly to child properties                             |
+| Editable application state         | `STNBinding<Value>`                                | Child edits write the application's model                     |
+| Local UI state                     | `stnContext.state(initial:)`                       | Owned by this mounted scope, disposed with it                 |
+| User action                        | `@MainActor` callback                              | Invoked by normal input/AT command path, never by painting    |
+| Conditional children / collections | `STNIf` / `STNForEach`                             | Explicit localized structural updates; stable-key rules apply |
 
 Do not put ordinary Swift `if stnSignal.value` around a child and expect it to change later. Do not call `makeContent` manually on each signal write. Do not store mutable global state to simulate per-instance state.
 
@@ -1699,14 +1699,14 @@ The composed text/button semantics already describe this control group. Adding a
 
 The proposed `STNComponentContext` is a UI-actor-isolated, mount-scoped capability, not access to mutable document records. Its supported capabilities must include:
 
-| Capability | Required semantics |
-|---|---|
-| `state(initial:equals:)` | Allocate local signal state; `Equatable` convenience; no implicit model persistence |
-| `own(subscription)` | Register cancellation with the mount scope; idempotent teardown and no queued delivery after cancellation |
-| `onDispose { ... }` | Register synchronous, nonthrowing application cleanup; mark scope dead first, run user cleanup only after the structural commit is consistent |
-| `task(operation:onError:)` | Start after successful mount publication, not during pure construction; own/cancel task with scope; operation/error handler use documented UI isolation |
-| Request token / `isCurrent(token)` | Validate scope and request revision after every suspension before updating UI state; starting a replacement request invalidates the previous token |
-| Environment read/binding | Capture immutable configuration or explicitly observe changing theme/direction/text-scale values with dependency-scoped invalidation |
+| Capability                         | Required semantics                                                                                                                                      |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `state(initial:equals:)`           | Allocate local signal state; `Equatable` convenience; no implicit model persistence                                                                     |
+| `own(subscription)`                | Register cancellation with the mount scope; idempotent teardown and no queued delivery after cancellation                                               |
+| `onDispose { ... }`                | Register synchronous, nonthrowing application cleanup; mark scope dead first, run user cleanup only after the structural commit is consistent           |
+| `task(operation:onError:)`         | Start after successful mount publication, not during pure construction; own/cancel task with scope; operation/error handler use documented UI isolation |
+| Request token / `isCurrent(token)` | Validate scope and request revision after every suspension before updating UI state; starting a replacement request invalidates the previous token      |
+| Environment read/binding           | Capture immutable configuration or explicitly observe changing theme/direction/text-scale values with dependency-scoped invalidation                    |
 
 For a loading component: mount a loading signal and text binding, start a scope-owned task after mount, await an explicitly isolated application service, then check the request token before assigning success/error state. Handle errors explicitly; cancellation does not show a failure message. Never start I/O from a computed, `measure`, `paint`, or semantic query. Do not rely on `deinit` for actor-isolated teardown, and do not make cleanup await renderer shutdown.
 
@@ -1768,12 +1768,12 @@ Keep these extension examples in a separate consumer/sample target and compile t
 
 Recruit Swift developers with varied declarative/reactive experience, including participants unfamiliar with Stana. Use a fixed onboarding guide, public diagnostics, and realistic small tasks in separate consumer targets; record prior experience and assistance. Start with a small formative cohort, revise, then retest with fresh participants. Declare recruitment/stopping rationale and limits; do not treat a convenient small cohort as a statistical population comparison.
 
-| Task | Probe / observable failure |
-|---|---|
-| Repair a stale builder read | Explain why `STNText(properties: .init(text: signal.value))` freezes after mount; choose a binding/computed; find the missing edge using diagnostics |
+| Task                               | Probe / observable failure                                                                                                                                              |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Repair a stale builder read        | Explain why `STNText(properties: .init(text: signal.value))` freezes after mount; choose a binding/computed; find the missing edge using diagnostics                    |
 | Build an editable keyed collection | Change a sibling property and reorder during editing; preserve editor identity/composition; explain why unequal value rows reset descendants and choose observable rows |
-| Choose local-state persistence | Predict move vs hide vs `STNIf` disposal/remount/virtualized eviction behavior; hoist state only when the task needs persistence |
-| Cancel/replace asynchronous work | Resolve out-of-order responses and removal during a request; distinguish cooperative cancellation, scope validity, and request freshness without stale publication |
+| Choose local-state persistence     | Predict move vs hide vs `STNIf` disposal/remount/virtualized eviction behavior; hoist state only when the task needs persistence                                        |
+| Cancel/replace asynchronous work   | Resolve out-of-order responses and removal during a request; distinguish cooperative cancellation, scope validity, and request freshness without stale publication      |
 
 Capture unaided/assisted completion, incorrect predictions, error type/count/severity, time to first correct model, debugging time/attempts, documentation/diagnostic use, moderator interventions, and final explanation of ownership/dependency behavior. Use think-aloud or retrospective walkthroughs as appropriate; report their effect on timing. Save anonymized error traces, not only final working code. Counterbalance task order; if comparing APIs, counterbalance toolkit order and account for prior experience/training. A timed comparative ergonomics claim needs a separately justified sample/analysis plan.
 

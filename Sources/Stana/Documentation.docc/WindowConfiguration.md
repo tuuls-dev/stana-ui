@@ -23,17 +23,17 @@ unavailable ones. Inactive features are not errors and produce no routine warnin
 
 ## Configuration groups
 
-| Group | Options |
-|---|---|
-| `creation` | Window/panel/utility/HUD/nonactivating role, identity, initial origin/display, saved-frame name, initial visibility and activation |
-| `appearance` | System/frameless frame, background (including `.clear`), opacity, shadow and automatic/light/dark appearance |
-| `titleBar` | Subtitle, title visibility, transparent/full-size title bar, separator, standard control visibility/enabled state and content border |
-| `resizing` | Resizability, content/frame minimum/maximum size, content/frame aspect ratio or resize increments, fullscreen size limits and live-resize preservation |
-| `interaction` | Movability, background dragging, mouse passthrough/movement, key/main eligibility, panel focus and inactive tooltips |
-| `behavior` | Level (including custom), animation, close/minimize eligibility, deactivation/hide behavior, panel/modal behavior and window-menu participation |
-| `workspaces` | Spaces, Mission Control/Stage Manager membership, cycling, fullscreen role, tiling and tabbing |
-| `systemIntegration` | Represented URL, edited status, minimized image/title, Dock badge and tab title/tooltip |
-| `chrome` | Toolbar, style/display/visibility, title-bar accessories and tab accessory |
+| Group               | Options                                                                                                                                                |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `creation`          | Window/panel/utility/HUD/nonactivating role, identity, initial origin/display, saved-frame name, initial visibility and activation                     |
+| `appearance`        | System/frameless frame, background (including `.clear`), opacity, shadow and automatic/light/dark appearance                                           |
+| `titleBar`          | Subtitle, title visibility, transparent/full-size title bar, separator, standard control visibility/enabled state and content border                   |
+| `resizing`          | Resizability, content/frame minimum/maximum size, content/frame aspect ratio or resize increments, fullscreen size limits and live-resize preservation |
+| `interaction`       | Movability, background dragging, mouse passthrough/movement, key/main eligibility, panel focus and inactive tooltips                                   |
+| `behavior`          | Level (including custom), animation, close/minimize eligibility, deactivation/hide behavior, panel/modal behavior and window-menu participation        |
+| `workspaces`        | Spaces, Mission Control/Stage Manager membership, cycling, fullscreen role, tiling and tabbing                                                         |
+| `systemIntegration` | Represented URL, edited status, minimized image/title, Dock badge and tab title/tooltip                                                                |
+| `chrome`            | Toolbar, style/display/visibility, title-bar accessories and tab accessory                                                                             |
 
 `automatic` means the host's normal behavior, not disabled. Optional constraints
 use `nil` for no explicit constraint. Choose at most one aspect-ratio or

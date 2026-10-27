@@ -1,4 +1,4 @@
-# ``Stana``
+# `Stana`
 
 Build retained desktop applications with explicit state and properties-first composition.
 
@@ -9,6 +9,7 @@ A component describes one mount. Signals update the properties of retained nodes
 ## Topics
 
 ### Start
+
 - <doc:GettingStarted>
 - <doc:StateAndBindings>
 - <doc:CustomComponents>

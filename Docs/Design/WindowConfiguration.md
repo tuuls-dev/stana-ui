@@ -26,16 +26,16 @@ errors and async completion where the native operation is asynchronous.
 
 ## Code-change overview
 
-| Subsystem | Responsibilities |
-|---|---|
-| Stana public API | Grouped configuration, reactive overloads, explicit actions, state/resolution outputs, toolbars, accessory definitions and move/resize/content wrappers |
-| WindowController | Native ownership, resolution, creation policy, update deferral, command subscriptions, child/sheet lifetime and stable chrome surfaces |
-| MountSession | Retained content, editing and semantic state; native pointer disposition and safe-content geometry |
-| StanaPlatform | Stana-owned option/state/error records, resolved descriptors and platform-window contracts |
-| StanaPlatformMacOS | Option translation, callback ownership, async operation cancellation, UTF-8 lifetimes and native chrome descriptors |
-| CStanaMacOS | Window/panel classes, styles, controls, constraints, native movement/resizing, state notifications, tabs/sheets/children, toolbar/accessory hosting and frame persistence |
-| Scene/input | Configurable root background, alpha-preserving drawing, exclusion-aware drag/resize hit testing and cancellation before native handoff |
-| StanaTesting | Recording host exercising the production controller without a window server; configurable unavailable features |
+| Subsystem          | Responsibilities                                                                                                                                                          |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Stana public API   | Grouped configuration, reactive overloads, explicit actions, state/resolution outputs, toolbars, accessory definitions and move/resize/content wrappers                   |
+| WindowController   | Native ownership, resolution, creation policy, update deferral, command subscriptions, child/sheet lifetime and stable chrome surfaces                                    |
+| MountSession       | Retained content, editing and semantic state; native pointer disposition and safe-content geometry                                                                        |
+| StanaPlatform      | Stana-owned option/state/error records, resolved descriptors and platform-window contracts                                                                                |
+| StanaPlatformMacOS | Option translation, callback ownership, async operation cancellation, UTF-8 lifetimes and native chrome descriptors                                                       |
+| CStanaMacOS        | Window/panel classes, styles, controls, constraints, native movement/resizing, state notifications, tabs/sheets/children, toolbar/accessory hosting and frame persistence |
+| Scene/input        | Configurable root background, alpha-preserving drawing, exclusion-aware drag/resize hit testing and cancellation before native handoff                                    |
+| StanaTesting       | Recording host exercising the production controller without a window server; configurable unavailable features                                                            |
 
 The private C ABI moves to version 2. Native object pointers remain opaque handles;
 records and strings are borrowed only during synchronous calls. Each custom chrome

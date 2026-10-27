@@ -11,20 +11,20 @@
 
 ## Completed checks
 
-| Check | Result |
-|---|---|
-| Full automated suite, `STANA_GUI_TESTS=1 swift test` | 47 passed across six test targets |
-| Retained identity and reactive graph | Diamonds, dynamic/equal-output edge reversal, registration order, cancellation, demand-only cache cleanup |
-| Structural/lifetime behavior | Reordering during composition, rejected keys/references, intentional value replacement, stale handles, late tasks, seeded moves |
-| Layout/input | Independent fixed-box oracle, constraints/flex redistribution, resize proposal restoration, current geometry, capture/bubble, keyboard scrolling |
-| Native rendering/text | Incremental raster equals full redraw; native custom-drawn window capture inspected; explicit UTF-8 byte lengths preserve embedded zero and multibyte text |
-| Native accessibility adapter | Committed element publication and revision checks; not a VoiceOver interoperability claim |
-| Public API fixtures | External positive fixture and three intentionally invalid consumer fixtures passed |
-| Runtime faults | Cycle, write-during-compute, and impure-comparator fixtures failed with the expected diagnosed fault in isolated processes |
-| Consumer packages | Counter, Preferences, and Editable Collection built successfully |
-| Distribution | Release Counter bundle assembled; `Info.plist` validated; bundled executable passed async state-update/launch/close smoke test |
-| Address Sanitizer | Reactive, text-buffer, and native text-shaping subsets passed; no sanitizer errors reported |
-| Boundaries | No Swift AppKit/SwiftUI imports, reverse core dependencies, native imports outside the adapter, unchecked Sendable escape hatches, or unsafe manifest flags |
+| Check                                                | Result                                                                                                                                                      |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Full automated suite, `STANA_GUI_TESTS=1 swift test` | 47 passed across six test targets                                                                                                                           |
+| Retained identity and reactive graph                 | Diamonds, dynamic/equal-output edge reversal, registration order, cancellation, demand-only cache cleanup                                                   |
+| Structural/lifetime behavior                         | Reordering during composition, rejected keys/references, intentional value replacement, stale handles, late tasks, seeded moves                             |
+| Layout/input                                         | Independent fixed-box oracle, constraints/flex redistribution, resize proposal restoration, current geometry, capture/bubble, keyboard scrolling            |
+| Native rendering/text                                | Incremental raster equals full redraw; native custom-drawn window capture inspected; explicit UTF-8 byte lengths preserve embedded zero and multibyte text  |
+| Native accessibility adapter                         | Committed element publication and revision checks; not a VoiceOver interoperability claim                                                                   |
+| Public API fixtures                                  | External positive fixture and three intentionally invalid consumer fixtures passed                                                                          |
+| Runtime faults                                       | Cycle, write-during-compute, and impure-comparator fixtures failed with the expected diagnosed fault in isolated processes                                  |
+| Consumer packages                                    | Counter, Preferences, and Editable Collection built successfully                                                                                            |
+| Distribution                                         | Release Counter bundle assembled; `Info.plist` validated; bundled executable passed async state-update/launch/close smoke test                              |
+| Address Sanitizer                                    | Reactive, text-buffer, and native text-shaping subsets passed; no sanitizer errors reported                                                                 |
+| Boundaries                                           | No Swift AppKit/SwiftUI imports, reverse core dependencies, native imports outside the adapter, unchecked Sendable escape hatches, or unsafe manifest flags |
 
 The unsigned local artifact is generated at `dist/CounterApp.app`. It is not a signed/notarized release or a clean-machine installation test.
 

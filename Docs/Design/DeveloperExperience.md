@@ -8,14 +8,14 @@ The product must make a retained mental model understandable without disguising 
 
 ## Developer journeys and hypotheses
 
-| Journey | Hypothesis | Evidence required |
-|---|---|---|
-| First application | One import and a copyable complete entry point avoid host setup friction | Build/run Counter as an external package |
-| Bind state | Constant/signal/computed overloads and explicit `.binding` reveal intent | Positive inference fixtures; explain captured `.value` |
-| Reuse a component | Ordinary Swift properties and scoped context are sufficient | Compile `LabelledField` without engine imports |
-| Edit a collection | Observable row identity prevents accidental editor resets | Reorder during composition; inspect same editor/undo state |
-| Add desktop behavior | Portable commands and dialogs remove routine native escape hatches | Preferences saves through a system dialog using only `Stana` |
-| Debug a mistake | Inspectable IDs, metrics, semantic state, and typed errors make ownership visible | Walk through all four tasks below |
+| Journey              | Hypothesis                                                                        | Evidence required                                            |
+| -------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| First application    | One import and a copyable complete entry point avoid host setup friction          | Build/run Counter as an external package                     |
+| Bind state           | Constant/signal/computed overloads and explicit `.binding` reveal intent          | Positive inference fixtures; explain captured `.value`       |
+| Reuse a component    | Ordinary Swift properties and scoped context are sufficient                       | Compile `LabelledField` without engine imports               |
+| Edit a collection    | Observable row identity prevents accidental editor resets                         | Reorder during composition; inspect same editor/undo state   |
+| Add desktop behavior | Portable commands and dialogs remove routine native escape hatches                | Preferences saves through a system dialog using only `Stana` |
+| Debug a mistake      | Inspectable IDs, metrics, semantic state, and typed errors make ownership visible | Walk through all four tasks below                            |
 
 ## Design decisions
 

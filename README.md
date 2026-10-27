@@ -46,6 +46,28 @@ struct MyApp {
 
 Builders mount once. Changing `count` updates the existing text node; it does not rerun the window or stack builder.
 
+## Developer commands
+
+The optional root `justfile` provides shortcuts for the existing Swift commands and
+scripts. Install `just` with `brew install just`; Swift 6.4 or newer and macOS are
+still required. Commands also work from repository subdirectories.
+
+```sh
+just                 # List available commands
+just build           # Debug build
+just build-release   # Release build, Swift warnings as errors
+just test            # Tests, Swift and native warnings as errors
+just check           # All non-GUI checks, all four example builds, and release build
+just run             # Run Counter
+just run Preferences # Run another example
+just benchmark       # Release-mode headless benchmark; prints JSON
+just package Examples/Counter CounterApp dev.stana.counter
+```
+
+Individual checks are available as `just check-boundaries`, `just check-api`, and
+`just check-runtime`; `just build-examples` builds all four examples. Direct Swift
+commands and scripts below remain supported, and CI does not require `just`.
+
 ## Run the examples
 
 ```sh
@@ -70,15 +92,15 @@ Each example is a separate consumer package importing only `Stana`.
 
 ## The small mental model
 
-| Input | Meaning |
-|---|---|
-| `text: "Hello"` | Constant for this mount |
-| `text: name` | Subscribe to a signal |
-| `text: name.map { "Hello, \($0)" }` | Subscribe to derived state |
-| `value: name.binding` | Read and write committed application state |
-| `text: name.value` | Capture the current value; **not** a subscription |
-| `STNIf(flag) { ... }` | Dispose/mount a localized branch |
-| `STNForEach(observableRows: rows, id: \.id)` | Preserve row/editor identity across reordering |
+| Input                                        | Meaning                                           |
+| -------------------------------------------- | ------------------------------------------------- |
+| `text: "Hello"`                              | Constant for this mount                           |
+| `text: name`                                 | Subscribe to a signal                             |
+| `text: name.map { "Hello, \($0)" }`          | Subscribe to derived state                        |
+| `value: name.binding`                        | Read and write committed application state        |
+| `text: name.value`                           | Capture the current value; **not** a subscription |
+| `STNIf(flag) { ... }`                        | Dispose/mount a localized branch                  |
+| `STNForEach(observableRows: rows, id: \.id)` | Preserve row/editor identity across reordering    |
 
 Properties come before children. Actions belong in properties. Ordinary Swift `if` and `for` in a builder run at mount time; use structural components for later changes.
 
@@ -102,4 +124,4 @@ Scripts/package-macos-app.sh Examples/Counter CounterApp dev.stana.counter
 
 Consumers can depend on `StanaTesting` and drive `STNTestHost` without creating a native application. The packaging script creates an unsigned `.app` in `dist/`; signing and notarization are application-owned.
 
-For native host/raster verification in a logged-in macOS session, run `STANA_GUI_TESTS=1 swift test`. GUI tests require window-server access; a filesystem sandbox may expose only a non-drawable virtual display.
+For native host/raster verification in a logged-in macOS session, run `just test-gui` or `STANA_GUI_TESTS=1 swift test`. GUI tests require window-server access; a filesystem sandbox may expose only a non-drawable virtual display. They are opt-in and are not enabled by `just check`.
