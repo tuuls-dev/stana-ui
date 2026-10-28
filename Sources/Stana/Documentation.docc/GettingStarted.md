@@ -14,4 +14,4 @@ STNApplication.run(windows: [window])
 
 Configure a node through its typed properties before composing children. Child closures contain only components. Built-in controls already supply keyboard behavior and semantic roles.
 
-Run the separate `Examples/Counter` package for a complete application. `Scripts/package-macos-app.sh` assembles a distributable unsigned bundle; signing remains the application's responsibility.
+Run the separate `Examples/Calculator` package for a complete application. `Scripts/package-macos-app.sh` assembles a distributable unsigned bundle; signing remains the application's responsibility.
