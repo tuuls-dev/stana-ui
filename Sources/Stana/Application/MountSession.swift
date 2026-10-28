@@ -23,6 +23,9 @@ import StanaText
 	package var onClose: (() -> Void)?
 	private var environmentSubscriptions: [STNSubscription] = []
 	private var closed = false
+	package var frameRegistrations: [FrameRegistration] = []
+	package var frameTargetTimestamp: Double = 0
+	package var framePeriod: Double = 0
 	package var onStable: (() -> Void)?
 	package let safeContentBounds: STNSignal<STNRect>
 
@@ -103,6 +106,25 @@ import StanaText
 
 	package func attach(_ window: any PlatformWindow) {
 		self.window = window
+		if let native = window as? MacOSWindow {
+			document.usesPresentationGeometry = true
+			native.graphics.onGeometry = { [weak self] geometry, confirmed, preserveAmbiguity in
+				guard let self else { return }
+				self.document.publishPresentation(geometry, confirmed: confirmed, preserveAmbiguity: preserveAmbiguity)
+				self.publishEditing()
+				self.window?.accessibility.publish(self.semantics.snapshot())
+			}
+			native.graphics.onFailure = { [weak self] message in self?.report(.nativeFailure(message)) }
+			native.graphics.onDiagnostic = { [weak self] diagnostic in
+				if let serial = UInt64(diagnostic.instance.split(separator: ":").last ?? "") {
+					self?.document.lookup(serial)?.onGPUError?(diagnostic)
+				}
+			}
+		}
+		(window as? MacOSWindow)?.onFrame = { [weak self] timestamp, target in
+			self?.tickFrames(timestamp: timestamp, target: target)
+		}
+		refreshFrameDemand()
 		window.onDraw = { [weak self] in self?.draw() }
 		window.onEvent = { [weak self] in self?.receive($0) }
 		window.onPointer = { [weak self] phase, point, shift, clicks, button in
@@ -140,6 +162,7 @@ import StanaText
 		}
 
 		layout.layout()
+		for (id, editor) in editors { document.nodes[id]?.textGeometryRevision = editor.revision }
 		nodeSnapshots = document.orderedNodes.map { STNNodeSnapshot($0, focused: document.focused) }
 		publishEditorEvents()
 		publishEditing()
@@ -175,12 +198,26 @@ import StanaText
 		}
 
 		layout.layout()
-		let snapshot = scene.build(
+		let planningClock = ContinuousClock()
+		let planningStart = planningClock.now
+		var snapshot = scene.build(
 			surfaceEpoch: window.renderer.surfaceEpoch,
 			backingRevision: window.renderer.backingRevision
 		)
+		let planningDuration = planningStart.duration(to: planningClock.now)
+		snapshot.planningMilliseconds =
+			Double(planningDuration.components.seconds) * 1000
+			+ Double(planningDuration.components.attoseconds) / 1e15
+		snapshot.targetTimestamp = frameTargetTimestamp
+		snapshot.framePeriod = framePeriod
+		if document.usesPresentationGeometry, document.presentationAcknowledgement != .unknown {
+			document.presentationAcknowledgement = .pending
+		}
 		do {
 			_ = try window.renderer.submit(snapshot)
+		} catch STNError.cancelled {
+			document.dirty.insert(.paint)
+			window.requestRedraw()
 		} catch {
 			report(.nativeFailure("Raster submission failed"))
 		}
@@ -349,7 +386,12 @@ import StanaText
 			let shown = node.style.secure ? String(repeating: "•", count: value.utf16.count) : value
 			let font = STNFont.system(size: node.style.font.size * document.textScale, weight: node.style.font.weight)
 			let offsets = text.offsets(in: shown, font: font).map { $0 - (paint?.offset ?? 0) }
-			let bounds = node.bounds.inset(by: node.style.padding)
+			let geometry = document.confirmedGeometry
+			let entry = geometry?.entries[id]
+			let matches = entry?.textRevision == editor.revision && entry?.localToHost.inverse != nil
+			let bounds = STNRect(width: node.bounds.size.width, height: node.bounds.size.height)
+				.inset(by: node.style.padding)
+			let transform = entry?.localToHost ?? .identity
 			window.publishText(
 				value,
 				selection: editor.displaySelection,
@@ -358,7 +400,10 @@ import StanaText
 				offsets: offsets,
 				revision: editor.revision,
 				secure: node.style.secure,
-				nodeID: id.nativeID
+				nodeID: id.nativeID,
+				transform: transform,
+				geometryMatches: matches,
+				geometryRevision: geometry?.revision ?? 0
 			)
 			if document.focused == id {
 				window.configureText(
@@ -375,7 +420,10 @@ import StanaText
 					bounds: bounds,
 					offsets: offsets,
 					revision: editor.revision,
-					secure: node.style.secure
+					secure: node.style.secure,
+					transform: transform,
+					geometryMatches: matches,
+					geometryRevision: geometry?.revision ?? 0
 				)
 			}
 		}

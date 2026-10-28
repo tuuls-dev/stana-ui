@@ -12,59 +12,33 @@ import StanaPrimitives
 	private let content: (Item) -> STNGroup
 
 	public init(
-		_ items: STNSignal<[Item]>,
+		_ items: some STNPropertyConvertible<[Item]>,
 		id: KeyPath<Item, ID>,
 		contentEquals: @escaping (Item, Item) -> Bool,
 		@STNBuilder content: @escaping (Item) -> STNGroup
 	) {
-		read = { items.value }
+		read = items.asProperty().read
 		key = { $0[keyPath: id] }
 		self.contentEquals = contentEquals
 		sameInstance = nil
 		self.content = content
 	}
 
-	public init(_ items: STNSignal<[Item]>, id: KeyPath<Item, ID>, @STNBuilder content: @escaping (Item) -> STNGroup)
+	public init(
+		_ items: some STNPropertyConvertible<[Item]>,
+		id: KeyPath<Item, ID>,
+		@STNBuilder content: @escaping (Item) -> STNGroup
+	)
 	where Item: Equatable {
 		self.init(items, id: id, contentEquals: { $0 == $1 }, content: content)
 	}
 
 	public init(
-		_ items: STNComputed<[Item]>,
-		id: KeyPath<Item, ID>,
-		contentEquals: @escaping (Item, Item) -> Bool,
-		@STNBuilder content: @escaping (Item) -> STNGroup
-	) {
-		read = { items.value }
-		key = { $0[keyPath: id] }
-		self.contentEquals = contentEquals
-		sameInstance = nil
-		self.content = content
-	}
-
-	public init(_ items: STNComputed<[Item]>, id: KeyPath<Item, ID>, @STNBuilder content: @escaping (Item) -> STNGroup)
-	where Item: Equatable {
-		self.init(items, id: id, contentEquals: { $0 == $1 }, content: content)
-	}
-
-	public init(
-		observableRows items: STNSignal<[Item]>,
+		observableRows items: some STNPropertyConvertible<[Item]>,
 		id: KeyPath<Item, ID>,
 		@STNBuilder content: @escaping (Item) -> STNGroup
 	) where Item: AnyObject {
-		read = { items.value }
-		key = { $0[keyPath: id] }
-		contentEquals = { $0 === $1 }
-		sameInstance = { $0 === $1 }
-		self.content = content
-	}
-
-	public init(
-		observableRows items: STNComputed<[Item]>,
-		id: KeyPath<Item, ID>,
-		@STNBuilder content: @escaping (Item) -> STNGroup
-	) where Item: AnyObject {
-		read = { items.value }
+		read = items.asProperty().read
 		key = { $0[keyPath: id] }
 		contentEquals = { $0 === $1 }
 		sameInstance = { $0 === $1 }

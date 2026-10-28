@@ -3,8 +3,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
-#define STN_ABI_VERSION 3
+#define STN_ABI_VERSION 4
 typedef struct { double x, y, width, height; } stn_rect;
+typedef struct { double a, b, c, d, tx, ty; } stn_affine;
 typedef struct { double red, green, blue, alpha; } stn_color;
 typedef struct { double width, height, baseline; } stn_text_metrics;
 typedef void *stn_window;
@@ -17,6 +18,7 @@ typedef struct {
                   // 12/13 image resources, 14 modal, 15 surface focus
     double x, y, a, b;
     uint64_t identity;
+    uint64_t sequence, epoch;
     stn_utf8 text;
 } stn_event;
 typedef void (*stn_event_callback)(void *, const stn_event *);

@@ -17,11 +17,19 @@ import Stana
 			)
 		) {
 			STNVStack(
-				properties: .init(spacing: 16, padding: 16, frame: .init(maxWidth: .infinity, maxHeight: .infinity))
+				properties: .init(
+					spacing: 16,
+					layout: .init(padding: STNInsets(16), frame: STNFrame(maxWidth: .infinity, maxHeight: .infinity))
+				)
 			) {
 				STNWindowDragRegion(properties: .init(frame: .init(height: 44, maxWidth: .infinity))) {
 					STNHStack(properties: .init(spacing: 12)) {
-						STNText(properties: .init(text: "Drag this header", font: .system(size: 16, weight: .semibold)))
+						STNText(
+							properties: .init(
+								text: "Drag this header",
+								textStyle: .init(font: STNFont.system(size: 16, weight: .semibold))
+							)
+						)
 						STNSpacer()
 						STNButton(properties: .init(text: "Toggle frame", onActivate: { frameless.value.toggle() }))
 						STNButton(properties: .init(text: "Close", onActivate: { STNApplication.stop() }))

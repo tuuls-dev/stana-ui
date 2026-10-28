@@ -11,7 +11,7 @@ The product must make a retained mental model understandable without disguising 
 | Journey              | Hypothesis                                                                        | Evidence required                                            |
 | -------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------ |
 | First application    | One import and a copyable complete entry point avoid host setup friction          | Build/run Counter as an external package                     |
-| Bind state           | Constant/signal/computed overloads and explicit `.binding` reveal intent          | Positive inference fixtures; explain captured `.value`       |
+| Bind state           | Generic constant/signal/computed inputs and explicit `.binding` reveal intent          | Positive inference fixtures; explain captured `.value`       |
 | Reuse a component    | Ordinary Swift properties and scoped context are sufficient                       | Compile `LabelledField` without engine imports               |
 | Edit a collection    | Observable row identity prevents accidental editor resets                         | Reorder during composition; inspect same editor/undo state   |
 | Add desktop behavior | Portable commands and dialogs remove routine native escape hatches                | Preferences saves through a system dialog using only `Stana` |
@@ -20,7 +20,7 @@ The product must make a retained mental model understandable without disguising 
 ## Design decisions
 
 - Preserve properties-first construction and mount-once composition.
-- Use the same property names/defaults wherever capabilities match; reject meaningless fields at compile time.
+- Share layout, text, appearance, interaction, accessibility, and lifecycle capability groups; preserve component-specific defaults and reject meaningless groups at compile time.
 - Keep read-only reactive values distinct from writable bindings.
 - Use nested boxes for order-sensitive styling; argument order is not a modifier pipeline.
 - Prefer composition over custom leaf/layout APIs until external examples establish a real need.

@@ -8,21 +8,23 @@ Use `STNTextField` for retained, custom-drawn single-line text editing. The writ
 let name = STNSignal("")
 let options = STNSignal(STNTextField.Options())
 
-STNTextField(properties: .init(
-    value: name.binding,
-    placeholder: "Display name",
-    options: options,
-    accessibility: .init(label: "Display name"),
-    onChange: { value in /* a committed user edit */ },
-    onSubmit: { /* Return/Enter */ }
-))
+STNTextField(
+	properties: .init(
+		value: name.binding,
+		placeholder: "Display name",
+		options: options,
+		accessibility: .init(label: "Display name"),
+		onChange: { value in /* a committed user edit */ },
+		onSubmit: { /* Return/Enter */  }
+	)
+)
 ```
 
-`Options` accepts a constant, signal, or computed value independently of `isEnabled`. Changing options updates the existing editor without resetting its text, selection, composition, or undo. Entering read-only mode cancels marked text without committing it.
+`Options` accepts a constant, signal, or computed value independently of `interaction.isEnabled`. Changing options updates the existing editor without resetting its text, selection, composition, or undo. Entering read-only mode cancels marked text without committing it.
 
 Read-only fields remain focusable, selectable, and copyable. Disabled fields cannot interact. Set `options.isReadOnly` for the former and `isEnabled` for the latter. External binding updates still work in either state.
 
-Options also configure logical leading/center/trailing alignment, text and placeholder colors, background, border, corner radius, selection color, and caret color. Leading/trailing follow the environment's layout direction. Fields retain their existing font, padding, frame, and secure-entry properties.
+Options configure logical leading/center/trailing alignment, placeholder color, selection color, caret color, and text services. Leading/trailing follow the environment's layout direction. Shared `textStyle` owns font and foreground; shared `appearance` owns background, border, and corner radius. `layout` owns padding and frame. These shared fields accept constants, signals, and computeds without replacing the editor. Secure entry remains a component-specific property.
 
 ## Editing and selection
 

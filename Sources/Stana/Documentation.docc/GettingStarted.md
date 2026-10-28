@@ -4,10 +4,10 @@ Create a SwiftPM executable depending on the `Stana` library product. Import `St
 
 ```swift
 let window = STNWindow(properties: .init(title: "Hello")) {
-    STNVStack(properties: .init(spacing: 12, padding: 24)) {
-        STNText(properties: .init(text: "Hello, desktop"))
-        STNButton(properties: .init(text: "Continue", onActivate: { print("Continue") }))
-    }
+	STNVStack(properties: .init(spacing: 12, layout: .init(padding: STNInsets(24)))) {
+		STNText(properties: .init(text: "Hello, desktop"))
+		STNButton(properties: .init(text: "Continue", onActivate: { print("Continue") }))
+	}
 }
 STNApplication.run(windows: [window])
 ```

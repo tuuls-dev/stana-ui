@@ -23,7 +23,7 @@ import Stana
 		}
 	}
 	let _ = STNWindow(properties: .init(title: "Constant", configuration: configuration.map { $0 })) {}
-	let _ = STNWindow(properties: .init(title: title.map { $0 }, configuration: .init())) {}
+	let _ = STNWindow(properties: .init(title: title.map { $0 }, configuration: STNWindow.Configuration())) {}
 	let state: STNComputed<STNWindowState> = window.state
 	let resolution: STNComputed<STNWindowResolution> = window.resolution
 	let _ = state.value.safeContentBounds

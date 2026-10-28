@@ -15,6 +15,7 @@ let targets: [Target] = [
 		publicHeadersPath: "include",
 		linkerSettings: [
 			.linkedFramework("AppKit"), .linkedFramework("CoreGraphics"), .linkedFramework("CoreText"),
+			.linkedFramework("Metal"), .linkedFramework("QuartzCore"), .linkedFramework("IOSurface"),
 		]
 	),
 	.target(name: "StanaPlatformMacOS", dependencies: ["StanaPlatform", "CStanaMacOS"]),
@@ -38,6 +39,7 @@ let targets: [Target] = [
 	.testTarget(name: "StanaTextTests", dependencies: ["StanaText"]),
 	.testTarget(name: "StanaAPITests", dependencies: ["StanaTesting"]),
 	.testTarget(name: "StanaSceneTests", dependencies: ["StanaScene", "StanaAccessibility"]),
+	.testTarget(name: "StanaGraphicsTests", dependencies: ["StanaGraphics"]),
 	.testTarget(
 		name: "StanaMacOSIntegrationTests",
 		dependencies: [

@@ -10,6 +10,7 @@ import StanaScene
 
 	package init(window: MacOSWindow) {
 		self.window = window
+		if let handle = window.handle { stn_metal_detach(handle) }
 	}
 
 	package func invalidate() {
@@ -50,6 +51,9 @@ import StanaScene
 				case .popClip: stn_draw_clip_pop(handle)
 				case .pushOpacity(let opacity): stn_draw_opacity_push(handle, opacity)
 				case .popOpacity: stn_draw_opacity_pop(handle)
+				case .pushTransform(let t): stn_draw_transform_push(handle, t.a, t.b, t.c, t.d, t.tx, t.ty)
+				case .popTransform: stn_draw_clip_pop(handle)
+				case .pushRoundedClip(let r, let radius): stn_draw_rounded_clip_push(handle, r.native, radius)
 				}
 			}
 

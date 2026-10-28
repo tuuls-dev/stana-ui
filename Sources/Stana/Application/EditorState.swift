@@ -33,8 +33,6 @@ import StanaText
 
 extension MountSession {
 	package func configureEditor(_ node: NodeRecord, options: STNTextField.Options) {
-		precondition(options.borderWidth.isFinite && options.borderWidth >= 0)
-		precondition(options.cornerRadius.isFinite && options.cornerRadius >= 0)
 		if options.isReadOnly && !node.style.isReadOnly {
 			editors[node.id]?.cancelComposition()
 			discardComposition(for: node.id)
@@ -47,12 +45,7 @@ extension MountSession {
 		case .center: node.style.alignment = .center
 		case .trailing: node.style.alignment = .trailing
 		}
-		node.style.foreground = options.foreground
 		node.style.placeholderColor = options.placeholderColor
-		node.style.background = options.background
-		node.style.borderColor = options.borderColor
-		node.style.borderWidth = options.borderWidth
-		node.style.cornerRadius = options.cornerRadius
 		node.style.selectionColor = options.selectionColor
 		node.style.caretColor = options.caretColor
 	}
@@ -201,10 +194,14 @@ extension MountSession {
 		guard node.kind == .textField, let editor = editors[node.id], let state = editorStates[node.id] else {
 			return
 		}
+		let selected = document.interactionGeometry?.entries[node.id]
+		guard selected?.textRevision == editor.revision, let inverse = selected?.localToHost.inverse else { return }
+		let local = inverse.applying(to: event.position)
+		let point = STNPoint(x: node.bounds.minX + local.x, y: node.bounds.minY + local.y)
 
 		if phase == .up || phase == .cancel {
 			if phase == .up && !event.isDefaultPrevented && state.dragging {
-				state.dragPoint = event.position
+				state.dragPoint = point
 				extendEditorDrag(node, state: state)
 			}
 
@@ -216,9 +213,9 @@ extension MountSession {
 			return
 		}
 
-		state.dragPoint = event.position
+		state.dragPoint = point
 		if phase == .down {
-			let index = editorIndex(node, at: event.position)
+			let index = editorIndex(node, at: point)
 			if event.button != 0 {
 				if !NSLocationInRange(index, editor.selection) {
 					try? editor.select(NSRange(location: index, length: 0))

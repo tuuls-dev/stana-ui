@@ -45,24 +45,28 @@ check-runtime:
 version bump:
     @Scripts/version.sh "$1"
 
-# Build all five consumer examples with Swift warnings as errors.
+# Build all consumer examples with Swift warnings as errors.
 build-examples:
-    for example in Counter Preferences EditableCollection WindowConfiguration TextFields; do \
+    for example in Counter Preferences EditableCollection WindowConfiguration TextFields HybridRendering; do \
         swift build --package-path "Examples/$example" -Xswiftc -warnings-as-errors; \
     done
 
-# Run an example: Counter, Preferences, EditableCollection, WindowConfiguration, or TextFields.
+# Run a consumer example.
 example example="Counter":
     @example="${1#example=}"; \
         case "$example" in \
-            Counter|Preferences|EditableCollection|WindowConfiguration|TextFields) ;; \
-            *) printf 'Unknown example: %s\nUsage: just example [Counter|Preferences|EditableCollection|WindowConfiguration|TextFields]\n' "$example" >&2; exit 1 ;; \
+            Counter|Preferences|EditableCollection|WindowConfiguration|TextFields|HybridRendering) ;; \
+            *) printf 'Unknown example: %s\nUsage: just example [Counter|Preferences|EditableCollection|WindowConfiguration|TextFields|HybridRendering]\n' "$example" >&2; exit 1 ;; \
         esac; \
         swift run --package-path "Examples/$example"
 
 # Run the headless benchmark in release mode and print its JSON report.
 benchmark:
     swift run --package-path Benchmarks -c release
+
+# Run the native hybrid workload (120 warm-up + 1,000 completed offscreen frames).
+benchmark-native mode="persistent" output="/tmp/stana-native-benchmark.json":
+    @sh Scripts/benchmark-native.sh "$1" "$2"
 
 # Create an unsigned macOS app in dist/ from a consumer package.
 package package-path product bundle-id:

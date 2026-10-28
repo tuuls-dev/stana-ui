@@ -9,6 +9,10 @@ import StanaPrimitives
 		STNGroup()
 	}
 
+	public static func buildExpression(_ registration: STNFrameSubscription) -> STNGroup {
+		STNGroup()
+	}
+
 	public static func buildBlock(_ groups: STNGroup...) -> STNGroup {
 		.init(components: groups.flatMap(\.components))
 	}

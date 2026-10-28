@@ -26,14 +26,20 @@ public struct STNImageSource: Equatable, Sendable {
 
 		public init(
 			image: STNImageSource,
-			frame: STNFrame = .init(),
+			layout: STNLayoutProperties = .init(),
+			appearance: STNAppearanceProperties = .init(),
+			interaction: STNInteractionProperties = .init(),
 			accessibility: STNAccessibilityProperties = .init(),
-			onMount: (@MainActor (STNNodeHandle) -> Void)? = nil
+			lifecycle: STNLifecycleProperties = .init()
 		) {
 			self.image = image
-			configuration.style.frame = frame
-			configuration.accessibility = accessibility
-			configuration.onMount = onMount
+			configuration.apply(
+				layout: layout,
+				appearance: appearance,
+				interaction: interaction,
+				accessibility: accessibility,
+				lifecycle: lifecycle
+			)
 		}
 	}
 

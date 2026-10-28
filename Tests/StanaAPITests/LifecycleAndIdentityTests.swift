@@ -92,10 +92,10 @@ import Testing
 				STNButton(
 					properties: .init(
 						text: "Save",
-						onMount: {
+						lifecycle: .init(onMount: {
 							handle = $0
 							try? $0.requestFocus()
-						},
+						}),
 						onActivate: {}
 					)
 				)
