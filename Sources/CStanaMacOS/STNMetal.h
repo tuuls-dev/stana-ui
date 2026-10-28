@@ -28,9 +28,9 @@
 @end
 
 typedef struct {
-    vector_float4 rect, uv, color, clip;
-    vector_float4 row0, row1, target, options;
-    uint32_t mode, linear, sourceLinear, masked;
+	vector_float4 rect, uv, color, clip;
+	vector_float4 row0, row1, target, options;
+	uint32_t mode, linear, sourceLinear, masked;
 } STNMetalQuad;
 
 @interface STNMetalAllocation : NSObject

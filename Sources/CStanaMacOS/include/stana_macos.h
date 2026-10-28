@@ -9,7 +9,8 @@ uint32_t stn_abi_version(void);
 void stn_app_initialize(void);
 void stn_app_run(void);
 void stn_app_stop(void);
-stn_window stn_window_create(stn_utf8, double, double, void *, stn_event_callback, stn_draw_callback, stn_text_callback);
+stn_window stn_window_create(stn_utf8, double, double, void *, stn_event_callback, stn_draw_callback,
+                             stn_text_callback);
 void stn_window_show(stn_window);
 void stn_window_redraw(stn_window);
 void stn_window_title(stn_window, stn_utf8);
@@ -20,10 +21,13 @@ void stn_window_text_options(stn_window, uint64_t, bool, bool, bool, const int32
 bool stn_text_service_enabled(int32_t, int32_t);
 double stn_caret_interval(bool);
 size_t stn_text_selection_rects(stn_utf8, double, double, uint64_t, uint64_t, stn_rect *, size_t);
-void stn_window_text_state(stn_window, stn_utf8, uint64_t, uint64_t, uint64_t, uint64_t, stn_rect, const double *, size_t, uint64_t, bool);
-void stn_window_text_geometry(stn_window, uint64_t, stn_utf8, uint64_t, uint64_t, uint64_t, uint64_t, stn_rect, const double *, size_t, uint64_t, bool, stn_affine, bool, uint64_t);
+void stn_window_text_state(stn_window, stn_utf8, uint64_t, uint64_t, uint64_t, uint64_t, stn_rect, const double *,
+                           size_t, uint64_t, bool);
+void stn_window_text_geometry(stn_window, uint64_t, stn_utf8, uint64_t, uint64_t, uint64_t, uint64_t, stn_rect,
+                              const double *, size_t, uint64_t, bool, stn_affine, bool, uint64_t);
 void stn_window_publish_semantics(stn_window, uint64_t, const stn_semantic_node *, size_t);
-void stn_window_semantic_text(stn_window, uint64_t, stn_utf8, uint64_t, uint64_t, stn_rect, const double *, size_t, uint64_t, bool);
+void stn_window_semantic_text(stn_window, uint64_t, stn_utf8, uint64_t, uint64_t, stn_rect, const double *, size_t,
+                              uint64_t, bool);
 // Graphics retain an offscreen sRGB backing store. Every present supplies its
 // complete image to AppKit; incremental drawing never relies on window pixels.
 bool stn_frame_begin(stn_window, double, double, const stn_rect *, size_t, bool);

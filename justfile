@@ -5,13 +5,15 @@ set positional-arguments
 default:
     @just --list
 
-# Format all repository Swift files with the bundled Swift formatter.
+# Format repository Swift and Objective-C sources.
 format:
     Scripts/format-swift.sh
+    Scripts/format-objc.sh
 
-# Check Swift formatting without changing files.
+# Check Swift and Objective-C formatting without changing files.
 check-format:
     Scripts/format-swift.sh lint
+    Scripts/format-objc.sh lint
 
 # Build the library in debug mode.
 build:

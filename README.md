@@ -142,7 +142,7 @@ Run these commands from the repository root:
 | `just build`                        | Build the library in debug mode.                                                                                            |
 | `just test`                         | Run tests with Swift and native warnings treated as errors.                                                                 |
 | `just check`                        | Run formatting, boundary checks, tests, API fixtures, runtime probes, all example builds, and a release build sequentially. |
-| `just format` / `just check-format` | Format Swift files or check without edits.                                                                                  |
+| `just format` / `just check-format` | Format Swift and Objective-C files, or check without edits. Requires `clang-format` (`brew install just clang-format`).     |
 | `just test-gui`                     | Run opt-in native GUI tests in a logged-in macOS session.                                                                   |
 | `just benchmark`                    | Run the release-mode headless benchmark and print JSON.                                                                     |
 

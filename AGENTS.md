@@ -11,7 +11,7 @@ Stana UI is a swift toolkit for creating crossplatform desktop apps. `Sources/St
 Use Swift 6.4 or newer in Swift 6 mode; the deployment target is macOS 26.
 
 - `just`: list available recipes.
-- `just format` / `just check-format`: format all repository Swift files or check formatting without edits.
+- `just format` / `just check-format`: format repository Swift and Objective-C files, or check formatting without edits.
 - `just build` / `just build-release`: debug/release builds.
 - `just test`: tests with Swift and native warnings treated as errors.
 - `just check`: sequential formatting and boundary checks, tests, API fixtures, runtime probes, all example builds, and release build.
@@ -23,7 +23,7 @@ Direct commands such as `swift build`, `swift test`, and `Scripts/check-boundari
 
 ## Coding Style & Naming Conventions
 
-Follow `.swift-format`: one tab per indentation level, a four-column tab width, and 120-column lines. Use `just format` (the built-in `swift format`, with no additional formatter dependency); `just check-format` and CI enforce its rules. EditorConfig supplies matching Swift indentation settings.
+Follow `.swift-format` for Swift and `.clang-format` for Objective-C: one tab per indentation level, a four-column tab width, and 120-column lines. `just format` runs the built-in `swift format` and `clang-format` on `PATH` (`brew install clang-format`). `just check-format` and CI enforce both. CI installs `just` and `clang-format`. EditorConfig supplies matching indentation settings.
 
 Use one blank line between methods, initializers, types, and computed properties; keep related stored properties together. Expand nonempty one-line function and control-flow bodies, and separate multiline control-flow blocks from following statements with a blank line. Do not add padding inside opening/closing braces or multiple consecutive blank lines. These breathing-room conventions must be applied when writing code: the formatter preserves existing gaps and expanded bodies but cannot require their presence. Wrapped argument lists use one argument per line, and multiline expression chains are separated onto lines.
 

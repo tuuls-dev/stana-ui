@@ -2,7 +2,7 @@
 
 Use Swift 6.4 in Swift 6 mode. Begin API changes with an example in a separate consumer package or `Fixtures/API/Valid`; add a negative fixture when misuse should not compile.
 
-Optionally install `just` with `brew install just`, then run `just` to list the
+Optionally install `just` and `clang-format` with `brew install just clang-format`, then run `just` to list the
 developer commands. `just check` runs formatting and boundary checks, strict tests, API
 fixtures, runtime-fault probes, all six example builds, and release build in
 sequence. The underlying Swift commands and scripts remain supported.
@@ -37,6 +37,19 @@ between multiline control-flow blocks and following statements. Avoid padding
 inside opening/closing braces. These are writing conventions, not fully automated
 checks: the bundled formatter preserves existing gaps and expanded bodies, but
 cannot require their presence.
+
+## Objective-C formatting
+
+`just format` and `just check-format` also format the Objective-C bridge with
+`clang-format` and `.clang-format`. `clang-format` must be on `PATH`; install it
+with `brew install clang-format`. Without `just`, run `Scripts/format-objc.sh` or
+`Scripts/format-objc.sh lint`. They cover repository `.h`, `.m`, and `.mm` files,
+including new unignored files, and exclude ignored build output. CI installs
+`just` and `clang-format`, then runs `just check-format`.
+
+Use tabs (one per indentation level, displayed as four columns), a 120-column
+limit, and at most one consecutive blank line. `.editorconfig` supplies matching
+indentation settings for these files.
 
 ## Contribution checklist
 

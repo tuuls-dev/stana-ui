@@ -11,8 +11,10 @@ jobs:
           swift-version: "6.4"
       - name: Verify required toolchain
         run: swift --version | grep 'Swift version 6.4'
-      - name: Swift formatting
-        run: Scripts/format-swift.sh lint
+      - name: Install just and clang-format
+        run: brew install just clang-format
+      - name: Formatting
+        run: just check-format
       - name: Boundary checks
         run: Scripts/check-boundaries.sh
       - name: Tests and strict concurrency

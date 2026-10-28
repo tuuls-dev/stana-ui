@@ -42,7 +42,11 @@
 @property(nonatomic) BOOL observingWindow;
 - (void)emit:(stn_event)event;
 - (void)textRequest:(int)kind text:(NSString *)text replacement:(NSRange)replacement selected:(NSRange)selected;
-- (void)textRequest:(int)kind text:(NSString *)text replacement:(NSRange)replacement selected:(NSRange)selected revision:(uint64_t)revision;
+- (void)textRequest:(int)kind
+               text:(NSString *)text
+        replacement:(NSRange)replacement
+           selected:(NSRange)selected
+           revision:(uint64_t)revision;
 @end
 
 @interface STNWindowHost (Configuration)
@@ -98,10 +102,16 @@
 @end
 
 static inline NSString *STNString(const char *s) { return s ? ([NSString stringWithUTF8String:s] ?: @"") : @""; }
-static inline NSString *STNUTF8(stn_utf8 s) { return s.bytes ? ([[NSString alloc] initWithBytes:s.bytes length:s.length encoding:NSUTF8StringEncoding] ?: @"") : @""; }
-static inline stn_utf8 STNBorrowedString(NSString *s) { return (stn_utf8){s.UTF8String,[s lengthOfBytesUsingEncoding:NSUTF8StringEncoding]}; }
+static inline NSString *STNUTF8(stn_utf8 s) {
+	return s.bytes ? ([[NSString alloc] initWithBytes:s.bytes length:s.length encoding:NSUTF8StringEncoding] ?: @"")
+	               : @"";
+}
+static inline stn_utf8 STNBorrowedString(NSString *s) {
+	return (stn_utf8){s.UTF8String, [s lengthOfBytesUsingEncoding:NSUTF8StringEncoding]};
+}
 static inline STNWindowHost *STNHost(stn_window p) { return (__bridge STNWindowHost *)p; }
 static inline CGRect STNRect(stn_rect r) { return CGRectMake(r.x, r.y, r.width, r.height); }
-STNTextSnapshot *STNMakeTextSnapshot(stn_utf8, uint64_t, uint64_t, uint64_t, uint64_t, stn_rect, const double *, size_t, uint64_t, bool);
+STNTextSnapshot *STNMakeTextSnapshot(stn_utf8, uint64_t, uint64_t, uint64_t, uint64_t, stn_rect, const double *, size_t,
+                                     uint64_t, bool);
 CTFontRef STNCreateFont(double size, double weight);
 NSRect STNTextRangeRect(STNTextSnapshot *, NSRange);
