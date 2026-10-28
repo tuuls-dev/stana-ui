@@ -24,11 +24,6 @@ jobs:
       - name: Runtime fault isolation
         run: Scripts/check-runtime-faults.sh
       - name: External consumer examples
-        run: |
-          swift build --package-path Examples/Counter -Xswiftc -warnings-as-errors
-          swift build --package-path Examples/Preferences -Xswiftc -warnings-as-errors
-          swift build --package-path Examples/EditableCollection -Xswiftc -warnings-as-errors
-          swift build --package-path Examples/TextFields -Xswiftc -warnings-as-errors
-          swift build --package-path Examples/HybridRendering -Xswiftc -warnings-as-errors
+        run: just build-examples
       - name: Release build
         run: swift build -c release -Xswiftc -warnings-as-errors

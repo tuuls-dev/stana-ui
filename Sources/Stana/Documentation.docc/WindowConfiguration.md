@@ -151,4 +151,4 @@ controller on a recording host, without creating NSApplication. It can simulate
 unavailable feature groups, busy transitions, resizing, safe-content changes,
 input, composition and toolbar activation. It is not a real platform backend.
 
-Run the example with `swift run --package-path Examples/WindowConfiguration`.
+Run `swift run --package-path Examples/Calculator`. That window sets a dark appearance, a minimum content size, frame autosave, a unified toolbar, a titlebar accessory, and a sheet.

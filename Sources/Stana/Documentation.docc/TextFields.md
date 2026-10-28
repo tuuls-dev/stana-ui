@@ -46,4 +46,4 @@ Query `handle.resolution()` for feature availability and effective settings. A h
 
 Only macOS has a native backend today. Inline prediction, rich text, multiline editing, validation/formatters, password-manager autofill, and clear/reveal accessories are not provided by this API. Manual native interoperability qualification is tracked separately from automated tests.
 
-Run `just example TextFields` for an editable, read-only, styled, and secure-entry showcase.
+`just example` opens the Calculator, which edits one styled expression field. That example does not demonstrate a read-only field or secure entry.

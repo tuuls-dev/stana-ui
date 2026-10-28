@@ -10,11 +10,11 @@ The product must make a retained mental model understandable without disguising 
 
 | Journey              | Hypothesis                                                                        | Evidence required                                            |
 | -------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| First application    | One import and a copyable complete entry point avoid host setup friction          | Build/run Counter as an external package                     |
+| First application    | One import and a copyable complete entry point avoid host setup friction          | Build/run Calculator as an external package                  |
 | Bind state           | Generic constant/signal/computed inputs and explicit `.binding` reveal intent          | Positive inference fixtures; explain captured `.value`       |
-| Reuse a component    | Ordinary Swift properties and scoped context are sufficient                       | Compile `LabelledField` without engine imports               |
+| Reuse a component    | Ordinary Swift properties and scoped context are sufficient                       | Compile a reusable labelled field without engine imports     |
 | Edit a collection    | Observable row identity prevents accidental editor resets                         | Reorder during composition; inspect same editor/undo state   |
-| Add desktop behavior | Portable commands and dialogs remove routine native escape hatches                | Preferences saves through a system dialog using only `Stana` |
+| Add desktop behavior | Portable commands and dialogs remove routine native escape hatches                | Calculator saves history through a system dialog using only `Stana` |
 | Debug a mistake      | Inspectable IDs, metrics, semantic state, and typed errors make ownership visible | Walk through all four tasks below                            |
 
 ## Design decisions
@@ -52,5 +52,7 @@ These are implementation checks, not participant-study findings:
 - Editable-row tests preserve focus, marked text, undo, and identity during sibling writes and reorders.
 - A controlled non-cooperative task cannot publish after removal; explicit replacement tokens invalidate older requests.
 - Native window captures verify actual custom-drawn output, not only authoring syntax.
+
+The consumer example is now `Examples/Calculator`. Counter, Preferences, and Editable Collection were removed after the checks above. This section does not record a new walkthrough of Calculator.
 
 Open research work remains: observe unfamiliar developers performing the walkthrough, record mistaken predictions and assistance, and refine the API from those findings before stabilization.

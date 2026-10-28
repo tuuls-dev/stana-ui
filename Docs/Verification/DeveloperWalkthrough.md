@@ -2,7 +2,7 @@
 
 Use a fresh consumer package and the README, not implementation imports. Record OS/toolchain, prior reactive experience, assistance, outcome, errors, and documentation used.
 
-1. **First window:** add the dependency and build/run Counter. Record setup steps and any undocumented intervention.
+1. **First window:** add the dependency and build/run `Examples/Calculator`. Record setup steps and any undocumented intervention.
 2. **Captured read:** replace a signal input with `.value`; predict and explain why the label freezes. Repair it using the public API.
 3. **Reusable component:** create two independent counter components using `context.state(initial:)`; hide, remove, and remount one. Explain state persistence.
 4. **Editable rows:** compose text, toggle a sibling, and reorder. Predict editor ID/focus/undo behavior. Contrast value-item replacement.

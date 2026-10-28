@@ -48,15 +48,15 @@ The macOS backend rasterizes Core Graphics/Core Text tiles on workers and compos
 - Swift 6.4 or newer, using Swift 6 language mode and a macOS SDK.
 - A logged-in graphical macOS session to open example windows.
 
-Check your toolchain with `swift --version`, then run the Counter example:
+Check your toolchain with `swift --version`, then run the Calculator example:
 
 ```sh
 git clone https://github.com/tuuls-dev/stana-ui.git
 cd stana-ui
-swift run --package-path Examples/Counter
+swift run --package-path Examples/Calculator
 ```
 
-No third-party Swift package dependencies are required. [Just](https://github.com/casey/just) is optional; if installed, `just example Counter` runs the same example.
+No third-party Swift package dependencies are required. [Just](https://github.com/casey/just) is optional; if installed, `just example` runs the same example.
 
 ### Use Stana in your own app
 
@@ -84,20 +84,15 @@ let package = Package(
 
 Save the [small example above](#a-small-example) as `Sources/CounterApp/App.swift`, then run `swift run CounterApp`. Keep the filename `App.swift` when using the `@main` entry point. This manifest pins the preview version explicitly.
 
-To work against a local checkout instead, replace the URL dependency with `.package(path: "../stana-ui")`, adjusting the path to your checkout. The included examples use local package dependencies.
+To work against a local checkout instead, replace the URL dependency with `.package(path: "../stana-ui")`, adjusting the path to your checkout. The included example uses a local package dependency.
 
 ## Examples
 
-Each example is an independent consumer package using the public API. Run one with `swift run --package-path Examples/<Name>` or `just example <Name>`.
+[Calculator](Examples/Calculator) is an independent consumer package using the public API. Run it with `swift run --package-path Examples/Calculator` or `just example`.
 
-| Example                                             | Demonstrates                                                       |
-| --------------------------------------------------- | ------------------------------------------------------------------ |
-| [Counter](Examples/Counter)                         | Signals, retained label updates, and a shared button/menu command. |
-| [Preferences](Examples/Preferences)                 | Editable settings and a reusable labelled-field component.         |
-| [EditableCollection](Examples/EditableCollection)   | Keyed observable rows and editing state during collection updates. |
-| [WindowConfiguration](Examples/WindowConfiguration) | Window settings, native relationships, and chrome.                 |
-| [TextFields](Examples/TextFields)                   | Styled single-line fields and text-service configuration.          |
-| [HybridRendering](Examples/HybridRendering)         | GPU charts, HDR compute, retained layers, blur and custom distortion. |
+| Example                             | Demonstrates                                                                                                      |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| [Calculator](Examples/Calculator)   | Scientific expressions, acrylic keys, an animated graph, menus, a toolbar, a sheet, dialogs, and window capture. |
 
 ### Text-field rendering
 
@@ -151,10 +146,10 @@ Without Just, use `swift build`, `swift test -Xswiftc -warnings-as-errors -Xcc -
 To assemble an unsigned example application:
 
 ```sh
-Scripts/package-macos-app.sh Examples/Counter CounterApp dev.example.counter
+Scripts/package-macos-app.sh Examples/Calculator CalculatorApp dev.example.calculator
 ```
 
-The script requires Python 3 and creates `dist/CounterApp.app`. Signing and notarization are application-owned steps.
+The script requires Python 3 and creates `dist/CalculatorApp.app`. Signing and notarization are application-owned steps.
 
 ## Help and contributing
 

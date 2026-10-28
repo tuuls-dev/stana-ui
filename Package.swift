@@ -47,6 +47,18 @@ let targets: [Target] = [
 			"StanaGraphics", "CStanaMacOS",
 		]
 	),
+	.executableTarget(
+		name: "CalculatorApp",
+		dependencies: ["Stana"],
+		path: "Examples/Calculator/Sources/CalculatorApp",
+		packageAccess: false
+	),
+	.testTarget(
+		name: "CalculatorTests",
+		dependencies: ["CalculatorApp", "StanaTesting"],
+		path: "Examples/Calculator/Tests/CalculatorTests",
+		packageAccess: false
+	),
 ]
 for target in targets where target.name != "CStanaMacOS" {
 	target.swiftSettings = [.defaultIsolation(nil)]
