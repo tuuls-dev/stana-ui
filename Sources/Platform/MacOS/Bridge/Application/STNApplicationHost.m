@@ -1,4 +1,4 @@
-#import "STNPrivate.h"
+#import "../STNPrivate.h"
 
 @interface STNAppDelegate : NSObject <NSApplicationDelegate>
 @end

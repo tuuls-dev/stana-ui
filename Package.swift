@@ -2,23 +2,32 @@
 import PackageDescription
 
 let targets: [Target] = [
-	.target(name: "StanaPrimitives"),
-	.target(name: "StanaCore", dependencies: ["StanaPrimitives"]),
-	.target(name: "StanaText", dependencies: ["StanaPrimitives"]),
-	.target(name: "StanaLayout", dependencies: ["StanaCore", "StanaText"]),
-	.target(name: "StanaScene", dependencies: ["StanaCore"]),
-	.target(name: "StanaGraphics", dependencies: ["StanaScene"]),
-	.target(name: "StanaAccessibility", dependencies: ["StanaCore"]),
-	.target(name: "StanaPlatform", dependencies: ["StanaGraphics", "StanaText", "StanaAccessibility"]),
+	.target(name: "StanaPrimitives", path: "Sources/Engine/Primitives"),
+	.target(name: "StanaCore", dependencies: ["StanaPrimitives"], path: "Sources/Engine/Core"),
+	.target(name: "StanaText", dependencies: ["StanaPrimitives"], path: "Sources/Engine/Text"),
+	.target(name: "StanaLayout", dependencies: ["StanaCore", "StanaText"], path: "Sources/Engine/Layout"),
+	.target(name: "StanaScene", dependencies: ["StanaCore"], path: "Sources/Engine/Scene"),
+	.target(name: "StanaGraphics", dependencies: ["StanaScene"], path: "Sources/Engine/Graphics"),
+	.target(name: "StanaAccessibility", dependencies: ["StanaCore"], path: "Sources/Engine/Accessibility"),
+	.target(
+		name: "StanaPlatform",
+		dependencies: ["StanaGraphics", "StanaText", "StanaAccessibility"],
+		path: "Sources/Platform/Contracts"
+	),
 	.target(
 		name: "CStanaMacOS",
+		path: "Sources/Platform/MacOS/Bridge",
 		publicHeadersPath: "include",
 		linkerSettings: [
 			.linkedFramework("AppKit"), .linkedFramework("CoreGraphics"), .linkedFramework("CoreText"),
 			.linkedFramework("Metal"), .linkedFramework("QuartzCore"), .linkedFramework("IOSurface"),
 		]
 	),
-	.target(name: "StanaPlatformMacOS", dependencies: ["StanaPlatform", "CStanaMacOS"]),
+	.target(
+		name: "StanaPlatformMacOS",
+		dependencies: ["StanaPlatform", "CStanaMacOS"],
+		path: "Sources/Platform/MacOS/Adapter"
+	),
 	.target(
 		name: "Stana",
 		dependencies: [
@@ -34,18 +43,23 @@ let targets: [Target] = [
 			"StanaGraphics",
 		]
 	),
-	.testTarget(name: "StanaCoreTests", dependencies: ["StanaCore"]),
-	.testTarget(name: "StanaLayoutTests", dependencies: ["StanaLayout"]),
-	.testTarget(name: "StanaTextTests", dependencies: ["StanaText"]),
-	.testTarget(name: "StanaAPITests", dependencies: ["StanaTesting"]),
-	.testTarget(name: "StanaSceneTests", dependencies: ["StanaScene", "StanaAccessibility"]),
-	.testTarget(name: "StanaGraphicsTests", dependencies: ["StanaGraphics"]),
+	.testTarget(name: "StanaCoreTests", dependencies: ["StanaCore"], path: "Tests/Engine/Core"),
+	.testTarget(name: "StanaLayoutTests", dependencies: ["StanaLayout"], path: "Tests/Engine/Layout"),
+	.testTarget(name: "StanaTextTests", dependencies: ["StanaText"], path: "Tests/Engine/Text"),
+	.testTarget(name: "StanaAPITests", dependencies: ["StanaTesting"], path: "Tests/Stana"),
+	.testTarget(
+		name: "StanaSceneTests",
+		dependencies: ["StanaScene", "StanaAccessibility"],
+		path: "Tests/Engine/Scene"
+	),
+	.testTarget(name: "StanaGraphicsTests", dependencies: ["StanaGraphics"], path: "Tests/Engine/Graphics"),
 	.testTarget(
 		name: "StanaMacOSIntegrationTests",
 		dependencies: [
 			"Stana", "StanaPlatformMacOS", "StanaPrimitives", "StanaCore", "StanaAccessibility", "StanaScene",
 			"StanaGraphics", "CStanaMacOS",
-		]
+		],
+		path: "Tests/Platform/MacOS"
 	),
 	.executableTarget(
 		name: "CalculatorApp",

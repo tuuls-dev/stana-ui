@@ -102,6 +102,7 @@ An offscreen rendering capture; see [text-field verification](Docs/Verification/
 
 ## Documentation
 
+- [Contributor documentation index](Docs/README.md)
 - [Getting started](Sources/Stana/Documentation.docc/GettingStarted.md)
 - [State and bindings](Sources/Stana/Documentation.docc/StateAndBindings.md)
 - [Shared properties and migration](Sources/Stana/Documentation.docc/SharedProperties.md)
@@ -110,7 +111,7 @@ An offscreen rendering capture; see [text-field verification](Docs/Verification/
 - [Desktop applications](Sources/Stana/Documentation.docc/DesktopApplications.md)
 - [Window configuration](Sources/Stana/Documentation.docc/WindowConfiguration.md)
 - [Hybrid rendering](Sources/Stana/Documentation.docc/HybridRendering.md)
-- [Architecture](Docs/Architecture.md)
+- [Architecture and source layout](Docs/Architecture.md)
 - [Platform support and qualification](Docs/PlatformSupport.md)
 
 The [DocC catalog](Sources/Stana/Documentation.docc) lives alongside the public API in `Sources/Stana`.

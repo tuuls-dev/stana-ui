@@ -1,4 +1,4 @@
-#import "STNPrivate.h"
+#import "../STNPrivate.h"
 
 CTFontRef STNCreateFont(double size, double weight) {
 	CTFontRef base = CTFontCreateUIFontForLanguage(kCTFontUIFontSystem, size, NULL);

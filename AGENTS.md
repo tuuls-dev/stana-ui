@@ -2,9 +2,13 @@
 
 ## Project Structure & Module Organization
 
-Stana UI is a swift toolkit for creating crossplatform desktop apps. `Sources/Stana` exposes the public API; sibling targets separate reactivity, layout, text, scenes, rendering, accessibility, and platform services. `Sources/CStanaMacOS` contains the private Objective-C bridge. Resources live in `Sources/Stana/Resources`; DocC lives in `Sources/Stana/Documentation.docc`.
+Stana UI is a swift toolkit for creating crossplatform desktop apps. `Sources/` has four entry points: `Stana` for the authoring API and composition root, `Engine` for portable subsystems, `Platform` for service contracts and native backends, and `StanaTesting` for consumer test hosts. Resources live in `Sources/Stana/Resources`; DocC lives in `Sources/Stana/Documentation.docc`.
 
-`Tests/` mirrors subsystem targets. `Examples/` contains independent consumer packages. `Fixtures/` holds API compilation cases and runtime-fault probes. `Scripts/` provides verification and packaging helpers; `Benchmarks/` contains performance fixtures. Consult `Docs/Architecture.md` and `CONTRIBUTING.md` before architectural changes.
+Within `Sources/Stana`, `Application` holds public application/window API, `Components` groups controls, layout, and drawing, and `Composition` holds builders and structural components. `Runtime` separates internal mounting, editing, and window lifetimes. `Sources/Engine` contains `Primitives`, `Core`, `Accessibility`, `Graphics`, `Layout`, `Scene`, and `Text`. `Sources/Platform/Contracts` holds portable platform interfaces; `Sources/Platform/MacOS/Adapter` contains Swift adapters and `Sources/Platform/MacOS/Bridge` contains the private Objective-C bridge. Bridge C headers stay in `Bridge/include`; private headers live beside their implementations or at the bridge root. Target names and dependencies remain defined in `Package.swift` with explicit paths for nested targets; organizational folders do not create additional modules.
+
+`Tests/` mirrors source areas: `Tests/Stana` holds authoring/runtime integration tests, `Tests/Engine` groups subsystem tests, and `Tests/Platform/MacOS` groups native rendering, text, and windowing tests with shared helpers in `Support`. Existing test target names and dependencies are preserved through explicit paths in `Package.swift`; do not create empty folders for subsystems without dedicated tests. `Examples/` contains independent consumer packages. `Fixtures/` holds API compilation cases and runtime-fault probes. `Scripts/` provides verification and packaging helpers; `Benchmarks/` contains performance fixtures. Consult `Docs/Architecture.md` and `CONTRIBUTING.md` before architectural changes.
+
+`Docs/README.md` indexes contributor documentation. Historical plans and exploratory design notes live in `Docs/Archive`, separate from current architecture and verification guidance. Use UpperCamelCase folder names inside example source targets, matching the toolkit sources.
 
 ## Build, Test, and Development Commands
 

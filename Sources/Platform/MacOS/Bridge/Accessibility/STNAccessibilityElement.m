@@ -1,4 +1,4 @@
-#import "STNPrivate.h"
+#import "../STNPrivate.h"
 
 static NSString *STNRole(int role) {
 	switch (role) {

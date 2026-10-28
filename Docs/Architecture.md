@@ -24,6 +24,87 @@ The diagram expresses layer direction, not every individual import. Core never i
 
 The authoring facade owns `STNPropertyConvertible`, erased `STNProperty` inputs, and shared capability groups. Conversion preserves constants or reactive sources without installing subscriptions. Groups override only specified fields over component defaults; internal node configuration installs subscriptions into mounted scopes. Declarative components never become retained records, and these public types introduce no dependency from Core back to Stana.
 
+## Source organization
+
+`Sources/` groups the authoring API, portable engine, platform backends, and consumer testing support. Existing targets remain the module and dependency boundaries; `Package.swift` specifies explicit paths for nested targets. Organizational folders do not introduce additional modules.
+
+```text
+Sources/
+├── Stana/                         public authoring API and composition root
+├── Engine/
+│   ├── Primitives/                StanaPrimitives
+│   │   ├── Appearance/
+│   │   ├── Geometry/
+│   │   ├── Rendering/
+│   │   └── Identity.swift
+│   ├── Core/                      StanaCore
+│   │   ├── Document/
+│   │   ├── Input/
+│   │   ├── Lifecycle/
+│   │   └── Reactivity/
+│   ├── Accessibility/             StanaAccessibility
+│   ├── Graphics/                  StanaGraphics
+│   ├── Layout/                    StanaLayout
+│   ├── Scene/                     StanaScene
+│   └── Text/                      StanaText
+├── Platform/
+│   ├── Contracts/                 StanaPlatform
+│   └── MacOS/
+│       ├── Adapter/               StanaPlatformMacOS (Swift)
+│       │   ├── Accessibility/
+│       │   ├── Desktop/
+│       │   ├── Rendering/
+│       │   ├── Text/
+│       │   └── Windowing/
+│       └── Bridge/                CStanaMacOS (Objective-C)
+│           ├── include/           exported C headers
+│           ├── Accessibility/
+│           ├── Application/
+│           ├── Desktop/
+│           ├── Rendering/
+│           ├── Text/
+│           ├── Windowing/
+│           └── STNPrivate.h
+└── StanaTesting/                  deterministic consumer test hosts
+```
+
+Within `Stana`, subdirectories organize related responsibilities:
+
+- `Stana/Application`: public application, window configuration, and window-region API.
+- `Stana/Components/Controls`, `Layout`, and `Drawing`: interactive/text controls, layout containers, and rendering components.
+- `Stana/Composition`: builders, component contracts, and structural components such as `STNIf` and `STNForEach`.
+- `Stana/Runtime/Mounting`, `Editing`, and `Windows`: internal mounted-content, editor, and native-window lifetime coordination.
+- `Stana/Desktop`, `Reactivity`, `Styling`, and `Diagnostics`: public desktop integration, reactive property inputs, shared styling, and diagnostics.
+
+`Engine/Primitives/Geometry` holds geometry, affine transforms, and presentation geometry; `Appearance` holds colors and themes; `Rendering` holds GPU values, rendered images, and rendering diagnostics. Smaller subsystem targets stay flat unless a meaningful responsibility grouping is needed.
+
+`Platform/Contracts` contains portable service interfaces and window configuration values. Each native backend owns its Swift adapter and Objective-C bridge together under `Platform`; macOS implementations are grouped by service. Bridge headers in `include` remain C-only, while private headers stay beside their implementations or at the bridge root. Relative private-header imports do not require additional header search paths or expose native types to Swift consumers. No placeholder backends are created for unsupported platforms.
+
+Tests mirror the source areas, while preserving the existing test targets through explicit paths:
+
+```text
+Tests/
+├── Stana/                         StanaAPITests
+├── Engine/
+│   ├── Core/                      StanaCoreTests
+│   │   ├── Document/
+│   │   └── Reactivity/
+│   ├── Graphics/                  StanaGraphicsTests
+│   ├── Layout/                    StanaLayoutTests
+│   ├── Scene/                     StanaSceneTests
+│   └── Text/                      StanaTextTests
+└── Platform/
+    └── MacOS/                     StanaMacOSIntegrationTests
+        ├── Rendering/
+        ├── Support/               shared native test helpers and GUI gating
+        ├── Text/
+        └── Windowing/
+```
+
+`Tests/Stana` covers authoring and runtime integration; the native test target keeps its existing opt-in GUI gating. Only existing test coverage gets folders, rather than adding placeholders for every source target. Examples, API/fault fixtures, and benchmarks retain their existing package boundaries. DocC and resources stay with `Stana`. Boundary checks use the nested core and adapter target roots rather than assuming every target is a direct child of `Sources`.
+
+See the [documentation index](README.md) for current guidance and [archived plans and design notes](Archive/README.md) for historical context.
+
 ## One authoritative document
 
 The UI executor owns the tree, graph, input, focus, and logical commits. Node IDs contain a unique document namespace and a monotonically increasing serial. IDs are never reused; exhaustion is a fatal diagnosed fault rather than wrapping. Class storage is deliberately chosen before arena optimization.

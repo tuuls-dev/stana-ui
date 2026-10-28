@@ -1,4 +1,4 @@
-#import "STNPrivate.h"
+#import "../STNPrivate.h"
 
 bool stn_text_service_enabled(int32_t feature, int32_t policy) {
 	if (policy)

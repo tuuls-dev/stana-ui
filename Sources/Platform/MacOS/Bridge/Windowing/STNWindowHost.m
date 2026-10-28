@@ -1,6 +1,6 @@
-#import "STNPrivate.h"
+#import "../STNPrivate.h"
 #import "STNWindowClasses.h"
-#import "STNMetal.h"
+#import "../Rendering/STNMetal.h"
 
 @implementation STNWindowHost
 - (void)emit:(stn_event)event {

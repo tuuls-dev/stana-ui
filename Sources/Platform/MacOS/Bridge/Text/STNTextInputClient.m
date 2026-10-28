@@ -1,5 +1,5 @@
-#import "STNPrivate.h"
-#import "STNMetal.h"
+#import "../STNPrivate.h"
+#import "../Rendering/STNMetal.h"
 @implementation STNTextSnapshot
 @end
 

@@ -1,4 +1,4 @@
-#import "STNPrivate.h"
+#import "../STNPrivate.h"
 #import "STNMetal.h"
 
 static void STNSetColor(CGContextRef c, stn_color color, BOOL stroke) {

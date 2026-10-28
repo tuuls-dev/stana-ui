@@ -1,4 +1,4 @@
-#import "STNPrivate.h"
+#import "../STNPrivate.h"
 @interface STNHostWindow : NSWindow
 @property(nonatomic, weak) STNWindowHost *nativeHost;
 @end

@@ -1,6 +1,6 @@
 # Native ABI, version 2
 
-`Sources/CStanaMacOS/include/stana_abi.h` defines Stana-owned fixed-width records. `stana_macos.h` declares the functions. Native/Swift sources are separate targets.
+`Sources/Platform/MacOS/Bridge/include/stana_abi.h` defines Stana-owned fixed-width records. `stana_macos.h` declares the functions. The Objective-C bridge (`CStanaMacOS`) and Swift adapter (`StanaPlatformMacOS`) remain separate targets under `Sources/Platform/MacOS/Bridge` and `Sources/Platform/MacOS/Adapter`.
 
 - Public headers contain only C scalars, UTF-8 strings, callbacks, and opaque handles.
 - UI functions and callbacks run on the main thread. Pure text-shaping functions do not create NSApplication.

@@ -1,0 +1,13 @@
+# Contributor documentation
+
+Consumer guides live in the [Stana DocC catalog](../Sources/Stana/Documentation.docc). This directory contains contributor-facing architecture, design, and verification documentation.
+
+- [Architecture and source organization](Architecture.md)
+- [Native ABI](NativeABI.md)
+- [Platform support and limitations](PlatformSupport.md)
+- [Architecture decisions](Decisions/)
+- Design: [developer experience](Design/DeveloperExperience.md) and [window configuration](Design/WindowConfiguration.md)
+- [Verification results](Verification/Results.md) and [developer walkthrough](Verification/DeveloperWalkthrough.md)
+- [Archived plans and exploratory design notes](Archive/README.md)
+
+Use the current architecture, decisions, and platform-support documents for implementation guidance. Archived material preserves historical context and may describe proposals that differ from the implementation.

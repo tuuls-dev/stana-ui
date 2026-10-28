@@ -1,4 +1,4 @@
-#import "STNPrivate.h"
+#import "../STNPrivate.h"
 
 void stn_clipboard_write(stn_utf8 text) {
 	NSPasteboard *p = NSPasteboard.generalPasteboard;

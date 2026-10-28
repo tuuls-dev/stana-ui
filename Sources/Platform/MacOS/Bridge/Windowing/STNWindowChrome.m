@@ -1,4 +1,4 @@
-#import "STNPrivate.h"
+#import "../STNPrivate.h"
 
 @interface STNToolbarDelegate : NSObject <NSToolbarDelegate>
 @property(nonatomic, weak) STNWindowHost *host;

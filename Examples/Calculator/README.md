@@ -70,15 +70,15 @@ The design follows the task sequence **calculate → inspect → revisit**. A st
 
 Design references: [Desmos's expression/graph relationship](https://help.desmos.com/hc/en-us/articles/202529279-Desmos-Graphing-Calculator-User-Guide), [Soulver's readable calculation history](https://soulver.app/), [NumWorks's task-focused graphing controls](https://www.numworks.com/calculator/apps/grapher/), and [Nielsen's usability heuristics](https://www.nngroup.com/articles/ten-usability-heuristics/). This is a design-informed implementation, not a claim of completed user research.
 
-The source tree follows a frontend-style organization under `Sources/CalculatorApp`:
+The source tree groups responsibilities under `Sources/CalculatorApp`, using UpperCamelCase folder names consistently with the toolkit:
 
-- `app/`: application entry point and window setup, with separate command, menu, and native-check files.
-- `components/`: calculator, graph, history, function catalog, and keypad components; `components/ui/` contains reusable instrument controls.
-- `domain/`: numerical evaluation, plot sampling, and graph geometry.
-- `state/`: calculator session transitions, editing, history, memory, and viewport state.
-- `models/`: keypad definitions.
-- `styles/`: visual tokens and window styling.
-- `utils/`: PNG encoding for picture export.
+- `App/`: application entry point and window setup, with separate command, menu, and native-check files.
+- `Components/`: calculator, graph, history, function catalog, and keypad components; `Components/UI/` contains reusable instrument controls.
+- `Domain/`: numerical evaluation, plot sampling, and graph geometry.
+- `State/`: calculator session transitions, editing, history, memory, and viewport state.
+- `Models/`: keypad definitions.
+- `Styles/`: visual tokens and window styling.
+- `Utilities/`: PNG encoding for picture export.
 
 The public toolkit currently exposes system-font sizes/weights, not custom font families; the example uses those supported capabilities rather than importing native typography APIs.
 

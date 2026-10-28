@@ -1,4 +1,4 @@
-#import "STNPrivate.h"
+#import "../STNPrivate.h"
 #import <Metal/Metal.h>
 #import <QuartzCore/QuartzCore.h>
 #import <IOSurface/IOSurface.h>
