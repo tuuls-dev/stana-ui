@@ -7,8 +7,8 @@ import Stana
 	_ = STNTextField(
 		properties: .init(
 			value: value.binding,
-			isEnabled: enabled,
 			options: options,
+			interaction: .init(isEnabled: enabled),
 			onEditorMount: { editor in
 				try? editor.requestFocus()
 				try? editor.selectAll()
@@ -30,10 +30,20 @@ import Stana
 	_ = STNTextField(properties: .init(value: value.binding))
 	_ = STNTextField(properties: .init(value: value.binding, options: options))
 	_ = STNTextField(properties: .init(value: value.binding, options: computedOptions))
-	_ = STNTextField(properties: .init(value: value.binding, isEnabled: enabled))
-	_ = STNTextField(properties: .init(value: value.binding, isEnabled: enabled, options: options))
-	_ = STNTextField(properties: .init(value: value.binding, isEnabled: enabled, options: computedOptions))
-	_ = STNTextField(properties: .init(value: value.binding, isEnabled: computedEnabled))
-	_ = STNTextField(properties: .init(value: value.binding, isEnabled: computedEnabled, options: options))
-	_ = STNTextField(properties: .init(value: value.binding, isEnabled: computedEnabled, options: computedOptions))
+	_ = STNTextField(properties: .init(value: value.binding, interaction: .init(isEnabled: enabled)))
+	_ = STNTextField(properties: .init(value: value.binding, options: options, interaction: .init(isEnabled: enabled)))
+	_ = STNTextField(
+		properties: .init(value: value.binding, options: computedOptions, interaction: .init(isEnabled: enabled))
+	)
+	_ = STNTextField(properties: .init(value: value.binding, interaction: .init(isEnabled: computedEnabled)))
+	_ = STNTextField(
+		properties: .init(value: value.binding, options: options, interaction: .init(isEnabled: computedEnabled))
+	)
+	_ = STNTextField(
+		properties: .init(
+			value: value.binding,
+			options: computedOptions,
+			interaction: .init(isEnabled: computedEnabled)
+		)
+	)
 }

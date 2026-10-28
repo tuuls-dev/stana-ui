@@ -6,6 +6,8 @@ public enum STNEventPhase: Sendable {
 
 @MainActor public final class STNPointerEvent {
 	public let position: STNPoint
+	public package(set) var localPosition = STNPoint.zero
+	public package(set) var geometryRevision: UInt64?
 	public let pointerID: Int
 	public let shift: Bool
 	public let clickCount: Int
@@ -61,7 +63,9 @@ extension Document {
 		clickCount: Int = 1,
 		button: Int = 0
 	) -> Int32 {
-		let target = captured.flatMap { nodes[$0] } ?? hitTest(point)
+		ensureGeometry?()
+		guard allowsLocation(point), let geometry = interactionGeometry else { return 0 }
+		let target = captured.flatMap { pointerEligible($0) ? nodes[$0] : nil } ?? hitTest(point)
 		guard let target else {
 			if phase == .up || phase == .cancel {
 				pressed = nil
@@ -73,6 +77,7 @@ extension Document {
 		}
 
 		var path: [NodeRecord] = []
+		guard geometry.entries[target.id]?.localToHost.inverse != nil else { return 0 }
 		var current: NodeRecord? = target
 		while let node = current {
 			path.append(node)
@@ -82,6 +87,7 @@ extension Document {
 		let event = STNPointerEvent(position: point, shift: shift, clickCount: clickCount, button: button)
 		var windowAction: Int32 = 0
 		event.target = target.id
+		event.geometryRevision = geometry.revision
 		event.capture = { [weak self, weak target] in self?.captured = target?.id }
 		event.release = { [weak self] in self?.captured = nil }
 		dispatchSnapshots = orderedNodes.map { STNNodeSnapshot($0, focused: focused) }
@@ -97,6 +103,7 @@ extension Document {
 			event.phase = .capture
 			for node in path.dropFirst().reversed() {
 				event.currentTarget = node.id
+				event.localPosition = geometry.entries[node.id]?.localToHost.inverse?.applying(to: point) ?? .zero
 				switch phase {
 				case .down: node.onPointerDownCapture?(event)
 				case .move: node.onPointerMoveCapture?(event)
@@ -115,6 +122,7 @@ extension Document {
 				}
 
 				event.currentTarget = node.id
+				event.localPosition = geometry.entries[node.id]?.localToHost.inverse?.applying(to: point) ?? .zero
 				event.phase = node === target ? .target : .bubble
 				switch phase {
 				case .down: node.onPointerDown?(event)
@@ -133,7 +141,8 @@ extension Document {
 				let wasPressed = pressed
 				pressed = nil
 				captured = nil
-				if phase == .up, !event.isDefaultPrevented, wasPressed == target.id, target.bounds.contains(point),
+				if phase == .up, !event.isDefaultPrevented, wasPressed == target.id,
+					geometry.entries[target.id]?.contains(point) == true,
 					target.kind != .textField
 				{
 					activate(target.id)
@@ -179,31 +188,21 @@ extension Document {
 
 	package func scroll(at point: STNPoint, dx: Double, dy: Double) {
 		ensureGeometry?()
-
-		func find(_ node: NodeRecord) -> NodeRecord? {
-			guard node.style.visibility == .visible else {
-				return nil
-			}
-
-			for child in node.children.reversed() {
-				if let found = find(child) {
-					return found
-				}
-			}
-
-			return node.kind == .scroll && node.bounds.contains(point) ? node : nil
-		}
-
-		guard let node = find(root) else {
-			return
-		}
+		guard allowsLocation(point), let geometry = interactionGeometry,
+			let id = geometry.order.reversed()
+				.first(where: { id in
+					nodes[id]?.kind == .scroll && pointerEligible(id) && geometry.entries[id]?.contains(point) == true
+				}), let node = nodes[id], let inverse = geometry.entries[id]?.localToHost.inverse
+		else { return }
+		let localDX = inverse.a * dx + inverse.c * dy
+		let localDY = inverse.b * dx + inverse.d * dy
 
 		node.scrollOffset.x = min(
-			max(0, node.scrollOffset.x - dx),
+			max(0, node.scrollOffset.x - localDX),
 			max(0, node.contentSize.width - node.bounds.size.width)
 		)
 		node.scrollOffset.y = min(
-			max(0, node.scrollOffset.y - dy),
+			max(0, node.scrollOffset.y - localDY),
 			max(0, node.contentSize.height - node.bounds.size.height)
 		)
 		changed(node, .all)

@@ -16,7 +16,7 @@ struct CounterApp {
 	@MainActor static func main() {
 		let count = STNSignal(0)
 		let window = STNWindow(properties: .init(title: "Counter", size: .init(width: 480, height: 320))) {
-			STNVStack(properties: .init(spacing: 16, padding: 28)) {
+			STNVStack(properties: .init(spacing: 16, layout: .init(padding: STNInsets(28)))) {
 				STNText(properties: .init(text: count.map { "Count: \($0)" }))
 				STNButton(properties: .init(text: "Increment", onActivate: { count.value += 1 }))
 			}
@@ -35,9 +35,10 @@ struct CounterApp {
 - **Desktop layouts:** stacks, boxes, overlays, spacers, bitmap images, decorative canvas drawing, and vertical scrolling.
 - **Interactive controls:** buttons, toggles, focus groups, and single-line text fields with selection, grouped undo, styling, and native macOS text services.
 - **Desktop integration:** configurable windows, frameless windows, panels, sheets, tabs, toolbars, menus, keyboard shortcuts, clipboard access, file dialogs, and alerts.
+- **Hybrid rendering:** retained affine layers, Metal shapes and application shaders, HDR scene capture, and ordered frosted/glass-like backdrop effects.
 - **Headless testing:** the `StanaTesting` product provides deterministic consumer test hosts without starting a native application.
 
-The macOS backend uses Core Graphics and Core Text, with a private Objective-C bridge to AppKit. Consumer code imports `Stana`, not AppKit or SwiftUI.
+The macOS backend rasterizes Core Graphics/Core Text tiles on workers and composites them with Metal, using a private Objective-C bridge to AppKit. Consumer code imports `Stana`, not AppKit or SwiftUI.
 
 ## Try it
 
@@ -96,6 +97,7 @@ Each example is an independent consumer package using the public API. Run one wi
 | [EditableCollection](Examples/EditableCollection)   | Keyed observable rows and editing state during collection updates. |
 | [WindowConfiguration](Examples/WindowConfiguration) | Window settings, native relationships, and chrome.                 |
 | [TextFields](Examples/TextFields)                   | Styled single-line fields and text-service configuration.          |
+| [HybridRendering](Examples/HybridRendering)         | GPU charts, HDR compute, retained layers, blur and custom distortion. |
 
 ### Text-field rendering
 
@@ -107,10 +109,12 @@ An offscreen rendering capture; see [text-field verification](Docs/Verification/
 
 - [Getting started](Sources/Stana/Documentation.docc/GettingStarted.md)
 - [State and bindings](Sources/Stana/Documentation.docc/StateAndBindings.md)
+- [Shared properties and migration](Sources/Stana/Documentation.docc/SharedProperties.md)
 - [Custom components and lifetimes](Sources/Stana/Documentation.docc/CustomComponents.md)
 - [Text fields](Sources/Stana/Documentation.docc/TextFields.md)
 - [Desktop applications](Sources/Stana/Documentation.docc/DesktopApplications.md)
 - [Window configuration](Sources/Stana/Documentation.docc/WindowConfiguration.md)
+- [Hybrid rendering](Sources/Stana/Documentation.docc/HybridRendering.md)
 - [Architecture](Docs/Architecture.md)
 - [Platform support and qualification](Docs/PlatformSupport.md)
 
@@ -121,6 +125,12 @@ The [DocC catalog](Sources/Stana/Documentation.docc) lives alongside the public 
 Scrolling mounts all children; there is no virtualized list. Multiline editing, selectable display text, grids, SVG interpretation, and an animation framework are not included. Rendering is currently CPU raster on the UI executor.
 
 Native services depend on the OS and device configuration. User-session VoiceOver and IME qualification remains separate from automated tests. Consult the [verification results](Docs/Verification/Results.md) and [platform support](Docs/PlatformSupport.md) before relying on a feature.
+
+## Shared properties
+
+Visual components share `layout`, `textStyle` (text-bearing controls), `appearance`, `interaction`, `accessibility`, and `lifecycle` groups. Omitted fields preserve each component’s defaults. Read-only inputs use `STNPropertyConvertible`: pass constants, signals, or computeds directly; writable controls still require `.binding`. Font, padding, and frame can update without remounting.
+
+See [shared configuration and migration](Sources/Stana/Documentation.docc/SharedProperties.md) for reusable groups, explicit-type syntax, and text-field styling changes.
 
 ## Development
 

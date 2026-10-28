@@ -3,7 +3,7 @@
 #import <ImageIO/ImageIO.h>
 #import "include/stana_macos.h"
 
-@class STNContentView, STNTextSnapshot, STNTextCheckingSession;
+@class STNContentView, STNTextSnapshot, STNTextCheckingSession, STNMetalRenderer;
 @interface STNWindowHost : NSObject <NSWindowDelegate>
 @property(nonatomic, strong) NSWindow *window;
 @property(nonatomic, strong) STNContentView *view;
@@ -15,6 +15,7 @@
 @property(nonatomic) size_t pixelWidth, pixelHeight;
 @property(nonatomic) double scale;
 @property(nonatomic) BOOL closing;
+@property(nonatomic, strong) STNMetalRenderer *metal;
 @property(nonatomic) BOOL applyingConfiguration;
 @property(nonatomic) BOOL draggingWindow;
 @property(nonatomic, strong) NSTimer *dragTimer;
@@ -59,6 +60,10 @@
 @property(nonatomic, strong) NSArray<NSNumber *> *offsets;
 @property(nonatomic) uint64_t revision;
 @property(nonatomic) BOOL secure;
+@property(nonatomic) CGAffineTransform transform;
+@property(nonatomic) BOOL geometryMatches;
+@property(nonatomic) NSRect fallbackRect;
+@property(nonatomic) uint64_t geometryRevision;
 @end
 
 @interface STNContentView : NSView

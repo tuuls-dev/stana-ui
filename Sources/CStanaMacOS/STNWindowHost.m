@@ -1,5 +1,6 @@
 #import "STNPrivate.h"
 #import "STNWindowClasses.h"
+#import "STNMetal.h"
 
 @implementation STNWindowHost
 - (void)emit:(stn_event)event { if (self.applyingConfiguration && event.kind==1) return; if (!self.closing && self.eventCallback) self.eventCallback(self.context, &event); }
@@ -27,8 +28,8 @@
 - (void)windowDidBecomeMain:(NSNotification *)n { [self publishState]; }
 - (void)windowDidResignMain:(NSNotification *)n { [self publishState]; }
 - (void)windowDidMiniaturize:(NSNotification *)n { [self publishState]; }
-- (void)windowDidDeminiaturize:(NSNotification *)n { [self publishState]; }
-- (void)windowDidChangeOcclusionState:(NSNotification *)n { [self publishState]; }
+- (void)windowDidDeminiaturize:(NSNotification *)n { [self publishState]; [self.metal requestFrame]; }
+- (void)windowDidChangeOcclusionState:(NSNotification *)n { [self publishState]; [self.metal requestFrame]; }
 - (void)windowWillStartLiveResize:(NSNotification *)n { [self publishState]; }
 - (void)windowDidEndLiveResize:(NSNotification *)n { [self publishState]; [self becameIdle]; }
 - (void)windowWillEnterFullScreen:(NSNotification *)n { self.fullscreenTransition=1; [self publishState]; }
@@ -87,8 +88,8 @@ stn_window stn_window_create_host(stn_utf8 title, double width, double height, i
     [host startObservingWindow];
     return (__bridge_retained void *)host;
 }
-void stn_window_show(stn_window p) { stn_window_action(p,1); [STNHost(p).view viewDidChangeEffectiveAppearance]; }
-void stn_window_redraw(stn_window p) { [STNHost(p).view setNeedsDisplay:YES]; }
+void stn_window_show(stn_window p) { stn_window_action(p,1); [STNHost(p).view viewDidChangeEffectiveAppearance]; [STNHost(p).metal requestFrame]; }
+void stn_window_redraw(stn_window p) { if (STNHost(p).metal) [STNHost(p).metal requestFrame]; else [STNHost(p).view setNeedsDisplay:YES]; }
 void stn_window_title(stn_window p, stn_utf8 title) {
     STNWindowHost *h=STNHost(p); h.window.title=STNUTF8(title);
     if (h.followsMinimizedTitle) h.window.miniwindowTitle=h.window.title;
@@ -96,6 +97,7 @@ void stn_window_title(stn_window p, stn_utf8 title) {
 void stn_window_destroy(stn_window p) {
     if (!p) return;
     STNWindowHost *host = (__bridge_transfer STNWindowHost *)p;
+    [host.metal detach]; host.metal=nil;
     [host.dragTimer invalidate]; host.dragTimer=nil; [host stopObservingWindow];
     host.closing = YES; host.windowCallbacks = (stn_window_callbacks){0}; host.eventCallback = NULL; host.drawCallback = NULL; host.textCallback = NULL; host.context = NULL;
     [host.view.inputContext deactivate]; [host.view invalidateTextServices]; host.view.host = nil;
@@ -126,6 +128,7 @@ bool stn_window_test_key_equivalent(stn_window p, stn_utf8 key) {
 - (BOOL)isFlipped { return YES; }
 - (void)viewDidMoveToWindow {
     [super viewDidMoveToWindow];
+    if (self.window) [self.host.metal requestFrame];
     if (self.window && self.editing) {
         [self.window makeFirstResponder:self]; [self.inputContext activate];
     }
@@ -159,6 +162,7 @@ bool stn_window_test_key_equivalent(stn_window p, stn_utf8 key) {
 }
 - (void)drawRect:(NSRect)dirty {
     STNWindowHost *h=self.host;
+    if (h.metal) return;
     if (h.drawCallback) h.drawCallback(h.context);
     if (h.backing) {
         CGImageRef image= CGBitmapContextCreateImage(h.backing);
@@ -169,16 +173,20 @@ bool stn_window_test_key_equivalent(stn_window p, stn_utf8 key) {
     }
 }
 - (void)pointer:(NSEvent *)event kind:(int)kind {
+    double start=CACurrentMediaTime();
     NSPoint p=[self convertPoint:event.locationInWindow fromView:nil];
     if (self.host.windowCallbacks.pointer) self.host.windowCallbacks.pointer(self.host.context,kind-2,p.x,p.y,(event.modifierFlags & NSEventModifierFlagShift)!=0,(int32_t)event.clickCount,(int32_t)event.buttonNumber);
     else [self.host emit:(stn_event){.kind=kind,.x=p.x,.y=p.y}];
+    [self.host.metal recordInputTimestamp:event.timestamp started:start];
 }
 - (void)mouseDown:(NSEvent *)e {
     if (self.editing && self.hasMarkedText && [self.inputContext handleEvent:e]) return;
     STNWindowHost *host=self.host;
     if (!host.windowCallbacks.pointer) { [self pointer:e kind:2]; return; }
     NSPoint p=[self convertPoint:e.locationInWindow fromView:nil];
+    double start=CACurrentMediaTime();
     int32_t action=host.windowCallbacks.pointer(host.context,0,p.x,p.y,(e.modifierFlags & NSEventModifierFlagShift)!=0,(int32_t)e.clickCount,(int32_t)e.buttonNumber);
+    [host.metal recordInputTimestamp:e.timestamp started:start];
     if (action==1 && host.window.movable) {
         STNBeginWindowTracking(host); [host.window performWindowDragWithEvent:e];
     } else if (action>=16 && (host.window.styleMask & NSWindowStyleMaskResizable)) {
@@ -200,24 +208,30 @@ bool stn_window_test_key_equivalent(stn_window p, stn_utf8 key) {
     else [self pointer:e kind:4];
 }
 - (void)rightMouseDown:(NSEvent *)e { [self pointer:e kind:2]; [self pointer:e kind:4]; [super rightMouseDown:e]; }
-- (void)scrollWheel:(NSEvent *)e { NSPoint p=[self convertPoint:e.locationInWindow fromView:nil]; [self.host emit:(stn_event){.kind=5,.x=p.x,.y=p.y,.a=e.scrollingDeltaX,.b=e.scrollingDeltaY}]; }
+- (void)scrollWheel:(NSEvent *)e {
+    double start=CACurrentMediaTime(); NSPoint p=[self convertPoint:e.locationInWindow fromView:nil];
+    [self.host emit:(stn_event){.kind=5,.x=p.x,.y=p.y,.a=e.scrollingDeltaX,.b=e.scrollingDeltaY}];
+    [self.host.metal recordInputTimestamp:e.timestamp started:start];
+}
 - (BOOL)performKeyEquivalent:(NSEvent *)event {
     NSString *key=event.charactersIgnoringModifiers.lowercaseString;
     if ((event.modifierFlags & NSEventModifierFlagCommand) && self.editing && [@[@"a",@"c",@"v",@"x",@"z"] containsObject:key]) { [self keyDown:event]; return YES; }
     return [super performKeyEquivalent:event];
 }
 - (void)keyDown:(NSEvent *)e {
+    double start=CACurrentMediaTime();
     NSString *characters=e.charactersIgnoringModifiers ?: @"";
     if (self.editing) {
         if (e.modifierFlags & NSEventModifierFlagCommand) {
             NSDictionary *commands=@{@"a":@"selectAll:",@"c":@"copy:",@"v":@"paste:",@"x":@"cut:",@"z":(e.modifierFlags & NSEventModifierFlagShift) ? @"redo:" : @"undo:"};
             NSString *command=commands[characters.lowercaseString];
-            if (command) { [self doCommandBySelector:NSSelectorFromString(command)]; return; }
+            if (command) { [self doCommandBySelector:NSSelectorFromString(command)]; [self.host.metal recordInputTimestamp:e.timestamp started:start]; return; }
         }
         [self interpretKeyEvents:@[e]];
     } else {
         [self.host emit:(stn_event){.kind=6,.text=STNBorrowedString(characters),.a=(e.modifierFlags & NSEventModifierFlagShift)!=0,.b=(e.modifierFlags & NSEventModifierFlagCommand)!=0}];
     }
+    [self.host.metal recordInputTimestamp:e.timestamp started:start];
 }
 - (void)viewDidChangeEffectiveAppearance {
     [super viewDidChangeEffectiveAppearance];

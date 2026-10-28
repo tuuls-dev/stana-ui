@@ -8,7 +8,12 @@ import Testing
 		let opacity = STNSignal(1.0)
 		let host = STNTestHost()
 		host.mount {
-			STNBox(properties: .init(padding: 12, background: background, opacity: opacity)) {
+			STNBox(
+				properties: .init(
+					layout: .init(padding: STNInsets(12)),
+					appearance: .init(background: background, opacity: opacity)
+				)
+			) {
 				STNText(properties: .init(text: "Retained"))
 			}
 		}
@@ -56,8 +61,18 @@ import Testing
 	@Test func nestedPaddingAndFrameHaveFixedGeometry() throws {
 		let host = STNTestHost(size: .init(width: 300, height: 200))
 		host.mount {
-			STNBox(properties: .init(padding: 10, frame: .init(width: 100, height: 80), background: .surface)) {
-				STNBox(properties: .init(padding: 5, frame: .init(width: 50, height: 40), background: .accent)) {
+			STNBox(
+				properties: .init(
+					layout: .init(padding: STNInsets(10), frame: STNFrame(width: 100, height: 80)),
+					appearance: .init(background: STNColor.surface)
+				)
+			) {
+				STNBox(
+					properties: .init(
+						layout: .init(padding: STNInsets(5), frame: STNFrame(width: 50, height: 40)),
+						appearance: .init(background: STNColor.accent)
+					)
+				) {
 					STNText(properties: .init(text: "Hi"))
 				}
 			}
@@ -111,7 +126,11 @@ import Testing
 		let host = STNTestHost()
 		let enabled = STNSignal(true)
 		var count = 0
-		host.mount { STNButton(properties: .init(text: "Action", isEnabled: enabled, onActivate: { count += 1 })) }
+		host.mount {
+			STNButton(
+				properties: .init(text: "Action", interaction: .init(isEnabled: enabled), onActivate: { count += 1 })
+			)
+		}
 		let id = try #require(host.nodes.first { $0.kind == "button" }).id
 		enabled.value = false
 		try host.activate(id)
@@ -126,13 +145,15 @@ import Testing
 		host.mount {
 			STNVStack {
 				STNSpacer()
-				STNBox(properties: .init(opacity: 0)) {
+				STNBox(properties: .init(appearance: .init(opacity: 0))) {
 					STNButton(properties: .init(text: "Transparent", onActivate: {}))
 				}
-				STNBox(properties: .init(visibility: .hidden)) {
+				STNBox(properties: .init(appearance: .init(visibility: .hidden))) {
 					STNButton(properties: .init(text: "Hidden", onActivate: {}))
 				}
-				STNBox(properties: .init(inert: true)) { STNButton(properties: .init(text: "Inert", onActivate: {})) }
+				STNBox(properties: .init(interaction: .init(inert: true))) {
+					STNButton(properties: .init(text: "Inert", onActivate: {}))
+				}
 			}
 		}
 		#expect(host.semantics.nodes.contains { $0.label == "Transparent" && !$0.isDisabled })

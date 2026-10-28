@@ -30,4 +30,16 @@ import StanaPrimitives
 
 		return try document.geometry(id)
 	}
+
+	/// Last presentation-confirmed bounds, not an assertion about current scanout.
+	public func presentationBounds() throws -> STNPresentationBounds? {
+		guard let document else { throw STNError.nodeDisposed }
+		_ = try document.resolve(id)
+		guard let geometry = document.confirmedGeometry, let entry = geometry.entries[id] else { return nil }
+		return .init(
+			bounds: entry.projectedBounds,
+			geometryRevision: geometry.revision,
+			acknowledgement: document.presentationAcknowledgement
+		)
+	}
 }

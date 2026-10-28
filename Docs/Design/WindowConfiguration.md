@@ -28,7 +28,7 @@ errors and async completion where the native operation is asynchronous.
 
 | Subsystem          | Responsibilities                                                                                                                                                          |
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Stana public API   | Grouped configuration, reactive overloads, explicit actions, state/resolution outputs, toolbars, accessory definitions and move/resize/content wrappers                   |
+| Stana public API   | Grouped configuration, generic reactive inputs, explicit actions, state/resolution outputs, toolbars, accessory definitions and move/resize/content wrappers                   |
 | WindowController   | Native ownership, resolution, creation policy, update deferral, command subscriptions, child/sheet lifetime and stable chrome surfaces                                    |
 | MountSession       | Retained content, editing and semantic state; native pointer disposition and safe-content geometry                                                                        |
 | StanaPlatform      | Stana-owned option/state/error records, resolved descriptors and platform-window contracts                                                                                |

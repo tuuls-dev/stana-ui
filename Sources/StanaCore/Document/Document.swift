@@ -3,7 +3,7 @@ import StanaPrimitives
 
 package enum NodeKind: String, Sendable {
 	case root, group, box, hStack, vStack, zStack, spacer, text, image, button, toggle, textField, scroll, canvas,
-		focusScope
+		focusScope, gpuCanvas, layer, backdrop
 }
 
 package struct Dirty: OptionSet, Sendable {
@@ -16,7 +16,16 @@ package struct Dirty: OptionSet, Sendable {
 	package static let layout = Self(rawValue: 1)
 	package static let paint = Self(rawValue: 2)
 	package static let semantics = Self(rawValue: 4)
+	package static let compositing = Self(rawValue: 8)
 	package static let all: Self = [.layout, .paint, .semantics]
+}
+
+package struct PaintChange: OptionSet, Sendable {
+	package let rawValue: UInt8
+	package init(rawValue: UInt8) { self.rawValue = rawValue }
+	package static let content = Self(rawValue: 1)
+	package static let geometry = Self(rawValue: 2)
+	package static let composite = Self(rawValue: 4)
 }
 
 package struct NodeStyle: Equatable, Sendable {
@@ -32,6 +41,8 @@ package struct NodeStyle: Equatable, Sendable {
 	package var borderWidth: Double = 0
 	package var cornerRadius: Double = 0
 	package var opacity: Double = 1
+	package var transform = STNAffineTransform.identity
+	package var retained = false
 	package var font = STNFont.system()
 	package var clip = false
 	package var isEnabled = true
@@ -55,6 +66,7 @@ package struct NodeStyle: Equatable, Sendable {
 	package let id: STNNodeID
 	package let kind: NodeKind
 	package weak var parent: NodeRecord?
+	package weak var document: Document?
 	package var children: [NodeRecord] = []
 	package let scope: LifetimeScope
 	private weak var ownerScope: LifetimeScope?
@@ -66,12 +78,21 @@ package struct NodeStyle: Equatable, Sendable {
 	package var textBinding: STNBinding<String>?
 	package var toggleBinding: STNBinding<Bool>?
 	package var imageData: Data?
-	package var bounds = STNRect.zero
+	package var bounds = STNRect.zero {
+		didSet {
+			if bounds != oldValue { document?.paintChanges[id, default: []].insert(.geometry) }
+		}
+	}
 	package var measured = STNSize.zero
 	package var contentSize = STNSize.zero
 	package var baseline: Double = 0
 	package var scrollOffset = STNPoint.zero
 	package var inputVersion: UInt64 = 0
+	package var textGeometryRevision: UInt64 = 0 {
+		didSet {
+			if textGeometryRevision != oldValue { document?.paintChanges[id, default: []].insert(.geometry) }
+		}
+	}
 	package var measureVersion: UInt64 = 0
 	package var placedMeasureVersion: UInt64?
 	package var measureCache: [AnyHashable: STNSize] = [:]
@@ -85,6 +106,9 @@ package struct NodeStyle: Equatable, Sendable {
 	package var onPointerMoveCapture: ((STNPointerEvent) -> Void)?
 	package var onPointerUpCapture: ((STNPointerEvent) -> Void)?
 	package var canvasCommands: [CanvasCommand] = []
+	package var gpuDrawing = STNGPUDrawing()
+	package var backdropEffect: STNBackdropEffect?
+	package var onGPUError: ((STNGPUDiagnostic) -> Void)?
 
 	package init(id: STNNodeID, kind: NodeKind, scope: LifetimeScope) {
 		self.id = id
@@ -120,6 +144,8 @@ public struct STNMetrics: Sendable, Equatable {
 	public package(set) var measureCalls = 0
 	public package(set) var placedNodes = 0
 	public package(set) var recordedPaintItems = 0
+	public package(set) var paintAncestorUpdates = 0
+	public package(set) var paintIndexUpdates = 0
 	public package(set) var semanticChanges = 0
 	public package(set) var logicalCommits = 0
 
@@ -154,12 +180,20 @@ public struct STNNodeSnapshot: Sendable, Equatable {
 	package var metrics = STNMetrics()
 	package var root: NodeRecord!
 	package var dirty: Dirty = .all
+	package var paintChanges: [STNNodeID: PaintChange] = [:]
+	package private(set) var structureRevision: UInt64 = 0
+	package private(set) var environmentRevision: UInt64 = 0
 	package var focused: STNNodeID?
 	package var pressed: STNNodeID?
 	package var captured: STNNodeID?
 	package var viewport: STNSize
 	package var windowBackgroundDragging = false
 	package var surfaceBackground = STNColor.background
+	package var renderingColorMode = STNRenderingColorMode.automatic
+	package var usesPresentationGeometry = false
+	package var confirmedGeometry: PresentationGeometry?
+	package var ambiguousGeometryRegions: [STNRect] = []
+	package var presentationAcknowledgement = STNPresentationAcknowledgement.pending
 	package var isClosed = false
 	package var dark = false
 	package var highContrast = false
@@ -186,6 +220,8 @@ public struct STNNodeSnapshot: Sendable, Equatable {
 		precondition(!isClosed && nodes.count < 100_000, "Stana: document node budget exceeded or document closed")
 		nextRevision(&serial)
 		let node = NodeRecord(id: .init(document: id, serial: serial), kind: kind, scope: scope)
+		node.document = self
+		nextRevision(&structureRevision)
 		nodes[node.id] = node
 		node.parent = parent
 		parent?.children.append(node)
@@ -229,6 +265,11 @@ public struct STNNodeSnapshot: Sendable, Equatable {
 
 		metrics.propertyUpdates += 1
 		dirty.formUnion(flags)
+		if flags.contains(.paint) { paintChanges[node.id, default: []].insert(.content) }
+		if flags.contains(.compositing) {
+			paintChanges[node.id, default: []].insert(.composite)
+			dirty.insert(.paint)
+		}
 		if flags.contains(.layout) {
 			var current: NodeRecord? = node
 			while let next = current {
@@ -242,6 +283,7 @@ public struct STNNodeSnapshot: Sendable, Equatable {
 	}
 
 	package func invalidateEnvironment(layout: Bool) {
+		nextRevision(&environmentRevision)
 		if layout {
 			for node in nodes.values {
 				node.measureCache.removeAll()
@@ -283,7 +325,9 @@ public struct STNNodeSnapshot: Sendable, Equatable {
 			return
 		}
 
-		let nextFocus = orderedNodes.filter { $0.id != node.id && $0.isFocusable }.map(\.id)
+		let nextFocus =
+			!isClosed && focused == node.id
+			? orderedNodes.filter { $0.id != node.id && $0.isFocusable }.map(\.id) : []
 		for child in Array(node.children) {
 			remove(child)
 		}
@@ -301,8 +345,10 @@ public struct STNNodeSnapshot: Sendable, Equatable {
 			captured = nil
 		}
 
-		node.parent?.children.removeAll { $0 === node }
+		if !isClosed { node.parent?.children.removeAll { $0 === node } }
+		node.children.removeAll()
 		nodes.removeValue(forKey: node.id)
+		nextRevision(&structureRevision)
 		metrics.mountedNodes -= 1
 		onDisposed?(node.id)
 		node.scope.dispose()
@@ -323,6 +369,7 @@ public struct STNNodeSnapshot: Sendable, Equatable {
 		}
 
 		parent.children = children
+		nextRevision(&structureRevision)
 		changed(parent, .all)
 	}
 
@@ -349,6 +396,7 @@ public struct STNNodeSnapshot: Sendable, Equatable {
 
 		STNTransaction.perform {
 			oldParent.children.removeAll { $0 === node }
+			nextRevision(&structureRevision)
 			destination.children.insert(node, at: index)
 			node.parent = destination
 			node.attachLifetime(to: destination.scope)
@@ -447,6 +495,7 @@ public struct STNNodeSnapshot: Sendable, Equatable {
 		}
 
 		STNTransaction.perform {
+			let oldFocus = focused
 			if let old = focused {
 				onEditingFocusLoss?(old)
 			}
@@ -457,8 +506,8 @@ public struct STNNodeSnapshot: Sendable, Equatable {
 				scrollIntoView(id)
 			}
 
-			dirty.formUnion([.paint, .semantics])
-			root.map { changed($0, [.paint, .semantics]) }
+			if let oldFocus, let old = nodes[oldFocus] { changed(old, [.paint, .semantics]) }
+			if let id, let current = nodes[id] { changed(current, [.paint, .semantics]) }
 		}
 	}
 
@@ -528,30 +577,17 @@ public struct STNNodeSnapshot: Sendable, Equatable {
 
 	package func hitTest(_ point: STNPoint) -> NodeRecord? {
 		ensureGeometry?()
-
-		func visit(_ node: NodeRecord, clip: STNRect) -> NodeRecord? {
-			guard node.style.visibility == .visible, !node.style.inert, node.style.isEnabled, clip.contains(point)
-			else {
-				return nil
+		guard allowsLocation(point), let geometry = interactionGeometry else { return nil }
+		for id in geometry.order.reversed() {
+			guard let node = nodes[id], pointerEligible(id), geometry.entries[id]?.contains(point) == true else {
+				continue
 			}
-
-			let childClip = node.style.clip || node.kind == .scroll ? clip.intersection(node.bounds) : clip
-			for child in node.children.reversed() {
-				if let hit = visit(child, clip: childClip) {
-					return hit
-				}
-			}
-
-			if node.bounds.contains(point),
-				node.isFocusable || node.onPointerDown != nil || node.onPointerMove != nil || node.onPointerUp != nil
-					|| node.style.windowInteraction != 0 || (node.kind == .root && windowBackgroundDragging)
+			if node.isFocusable || node.onPointerDown != nil || node.onPointerMove != nil || node.onPointerUp != nil
+				|| node.style.windowInteraction != 0 || (node.kind == .root && windowBackgroundDragging)
 			{
 				return node
 			}
-
-			return nil
 		}
-
-		return visit(root, clip: .init(width: viewport.width, height: viewport.height))
+		return nil
 	}
 }

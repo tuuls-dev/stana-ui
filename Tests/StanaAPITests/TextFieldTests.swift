@@ -7,7 +7,7 @@ import Testing
 	@Test func capturedEdgeDraggingAutoscrollsAndCancellationStopsIt() throws {
 		let value = STNSignal(String(repeating: "abcdefghij", count: 10))
 		let host = STNTestHost()
-		host.mount { STNTextField(properties: .init(value: value.binding, frame: .init(width: 100))) }
+		host.mount { STNTextField(properties: .init(value: value.binding, layout: .init(frame: STNFrame(width: 100)))) }
 		defer { host.close() }
 		let node = try #require(host.nodes.first { $0.kind == "textField" })
 		host.pointerDown(at: .init(x: node.bounds.minX + 9, y: node.bounds.minY + 10))
@@ -38,7 +38,13 @@ import Testing
 		let value = STNSignal("hello world")
 		let host = STNTestHost()
 		host.mount {
-			STNTextField(properties: .init(value: value.binding, font: .system(size: 15), frame: .init(width: 200)))
+			STNTextField(
+				properties: .init(
+					value: value.binding,
+					layout: .init(frame: STNFrame(width: 200)),
+					textStyle: .init(font: STNFont.system(size: 15))
+				)
+			)
 		}
 		defer { host.close() }
 		let node = try #require(host.nodes.first { $0.kind == "textField" })
@@ -61,7 +67,7 @@ import Testing
 		let value = STNSignal("hello")
 		let host = STNTestHost()
 		host.mount {
-			STNBox(properties: .init(onPointerDownCapture: { $0.preventDefault() })) {
+			STNBox(properties: .init(interaction: .init(onPointerDownCapture: { $0.preventDefault() }))) {
 				STNTextField(properties: .init(value: value.binding))
 			}
 		}
@@ -167,14 +173,18 @@ import Testing
 		let options = STNSignal(STNTextField.Options())
 		let enabled = STNSignal(true)
 		let host = STNTestHost()
-		host.mount { STNTextField(properties: .init(value: value.binding, isEnabled: enabled, options: options)) }
+		host.mount {
+			STNTextField(
+				properties: .init(value: value.binding, options: options, interaction: .init(isEnabled: enabled))
+			)
+		}
 		defer { host.close() }
 		let node = try #require(host.nodes.first { $0.kind == "textField" })
 		try host.focus(node.id)
 		host.insertText("!")
 		host.setMarkedText("に", selectedRange: .init(location: 1, length: 0))
 		let before = host.editorState(node.id)
-		options.value.background = .black
+		options.value.placeholderColor = .black
 		options.value.alignment = .trailing
 		#expect(host.editorState(node.id) == before)
 		options.value.isReadOnly = true
@@ -191,7 +201,7 @@ import Testing
 			STNTextField(
 				properties: .init(
 					value: value.binding,
-					options: .init(textServices: .init(spelling: .enabled)),
+					options: STNTextField.Options(textServices: .init(spelling: .enabled)),
 					onEditorMount: { handle = $0 }
 				)
 			)

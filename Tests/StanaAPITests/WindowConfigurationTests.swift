@@ -153,7 +153,10 @@ import Testing
 					STNButton(properties: .init(text: "Close", onActivate: { activations += 1 }))
 					STNWindowDragRegion(properties: .init(mode: .exclude, frame: .init(width: 70, height: 40))) {}
 					STNBox(
-						properties: .init(frame: .init(width: 70, height: 40), onPointerDown: { $0.preventDefault() })
+						properties: .init(
+							layout: .init(frame: STNFrame(width: 70, height: 40)),
+							interaction: .init(onPointerDown: { $0.preventDefault() })
+						)
 					) {}
 				}
 			}
@@ -201,7 +204,7 @@ import Testing
 		let window = STNWindow(
 			properties: .init(
 				title: "Transparent",
-				configuration: .init(appearance: .init(frame: .frameless, background: .clear))
+				configuration: STNWindow.Configuration(appearance: .init(frame: .frameless, background: .clear))
 			)
 		) {}
 		let host = try STNWindowTestHost(window: window)
@@ -221,7 +224,7 @@ import Testing
 		let accessory = STNTitlebarAccessory(
 			properties: .init(identifier: "status", size: .init(width: 120, height: 26))
 		) {
-			STNText(properties: .init(text: "Status", onMount: { _ in mounts += 1 }))
+			STNText(properties: .init(text: "Status", lifecycle: .init(onMount: { _ in mounts += 1 })))
 		}
 		let toolbar = STNToolbar(properties: .init(identifier: "editor")) { .command(id: "save", command) }
 		let config = STNSignal(STNWindow.Configuration(chrome: .init(toolbar: toolbar, accessories: [accessory])))
@@ -277,7 +280,7 @@ import Testing
 		let window = STNWindow(
 			properties: .init(title: "Close during mount", onConfigurationError: { errors.append($0) })
 		) {
-			STNText(properties: .init(text: "Closing", onMount: { _ in reference.window?.close() }))
+			STNText(properties: .init(text: "Closing", lifecycle: .init(onMount: { _ in reference.window?.close() })))
 		}
 		reference.window = window
 		let host = try STNWindowTestHost(window: window)

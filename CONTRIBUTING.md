@@ -4,7 +4,7 @@ Use Swift 6.4 in Swift 6 mode. Begin API changes with an example in a separate c
 
 Optionally install `just` with `brew install just`, then run `just` to list the
 developer commands. `just check` runs formatting and boundary checks, strict tests, API
-fixtures, runtime-fault probes, all five example builds, and release build in
+fixtures, runtime-fault probes, all six example builds, and release build in
 sequence. The underlying Swift commands and scripts remain supported.
 
 ## Releases
@@ -43,7 +43,7 @@ cannot require their presence.
 1. Read [architecture](Docs/Architecture.md) and [developer experience](Docs/Design/DeveloperExperience.md).
 2. Keep shared names/defaults consistent. No public placeholders, modifier chains, implicit observation, or native types in public signatures.
 3. Run `just check` (or run the corresponding Swift commands and `Scripts/check-*.sh` scripts directly).
-4. All five examples are built by `just build-examples` and `just check`; run affected native/VoiceOver/IME checks and record actual results. Use `just test-gui` in a logged-in macOS session with window-server access for native GUI tests; these are not enabled by `just check`.
+4. All six examples are built by `just build-examples` and `just check`; run affected native/VoiceOver/IME checks and record actual results. Use `just test-gui` in a logged-in macOS session with window-server access for native GUI tests; these are not enabled by `just check`. Use `just benchmark-native persistent` and `just benchmark-native direct` for the release hybrid workload (120 warm-up and 1,000 measured completed offscreen frames); run Metal validation separately from performance measurements.
 5. Update DocC, examples, and platform limitations with the change.
 
 Runtime faults (cycles, forbidden mutation, exhausted budgets) fail deterministically with a diagnostic. Application failures belong in application state. Validate fallible structural plans before mutating the tree.

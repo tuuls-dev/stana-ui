@@ -25,6 +25,8 @@ public struct STNSemanticNode: Equatable, Sendable {
 	public let isSecure: Bool
 	public let isReadOnly: Bool
 	public let headingLevel: Int?
+	public package(set) var geometryRevision: UInt64? = nil
+	public package(set) var geometryAcknowledgement: STNPresentationAcknowledgement = .confirmed
 }
 
 @MainActor package protocol AccessibilityBridge: AnyObject {
@@ -69,6 +71,13 @@ public struct STNSemanticNode: Equatable, Sendable {
 			}
 
 			let unavailable = disabled || !node.style.isEnabled || node.style.inert
+			let geometry = document.usesPresentationGeometry ? document.confirmedGeometry?.entries[node.id] : nil
+			let projectedBounds = document.usesPresentationGeometry ? (geometry?.projectedBounds ?? .zero) : node.bounds
+			let clipVisible =
+				geometry?.clips
+				.allSatisfy {
+					projectedBounds.intersects($0.localToHost.enclosing($0.rect))
+				} ?? true
 			if let role {
 				result.append(
 					.init(
@@ -83,13 +92,21 @@ public struct STNSemanticNode: Equatable, Sendable {
 							? nil
 							: (node.kind == .textField
 								? node.text : node.kind == .toggle ? (node.isOn ? "1" : "0") : nil),
-						bounds: node.bounds,
+						bounds: projectedBounds,
 						isDisabled: unavailable,
 						isFocused: document.focused == node.id,
-						isOffscreen: !node.bounds.intersects(clip),
+						isOffscreen: !projectedBounds.intersects(
+							.init(width: document.viewport.width, height: document.viewport.height)
+						)
+							|| !clipVisible
+							|| (document.usesPresentationGeometry && geometry?.localToHost.inverse == nil),
 						isSecure: node.style.secure,
 						isReadOnly: node.style.isReadOnly,
-						headingLevel: node.style.heading
+						headingLevel: node.style.heading,
+						geometryRevision: document.usesPresentationGeometry
+							? document.confirmedGeometry?.revision : document.revision,
+						geometryAcknowledgement: document.usesPresentationGeometry
+							? document.presentationAcknowledgement : .confirmed
 					)
 				)
 			}

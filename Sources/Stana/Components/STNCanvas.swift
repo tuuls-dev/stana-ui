@@ -22,31 +22,23 @@ public struct STNDrawing: Equatable, Sendable {
 		package var configuration = NodeConfiguration()
 		package let drawing: Property<STNDrawing>
 
-		public init(drawing: STNDrawing, frame: STNFrame = .init(), accessibility: STNAccessibilityProperties = .init())
-		{
-			self.drawing = Property(drawing)
-			configuration.style.frame = frame
-			configuration.accessibility = accessibility
-		}
-
 		public init(
-			drawing: STNSignal<STNDrawing>,
-			frame: STNFrame = .init(),
-			accessibility: STNAccessibilityProperties = .init()
+			drawing: some STNPropertyConvertible<STNDrawing>,
+			layout: STNLayoutProperties = .init(),
+			appearance: STNAppearanceProperties = .init(),
+			interaction: STNInteractionProperties = .init(),
+			accessibility: STNAccessibilityProperties = .init(),
+			lifecycle: STNLifecycleProperties = .init()
 		) {
-			self.drawing = Property(drawing)
-			configuration.style.frame = frame
-			configuration.accessibility = accessibility
-		}
-
-		public init(
-			drawing: STNComputed<STNDrawing>,
-			frame: STNFrame = .init(),
-			accessibility: STNAccessibilityProperties = .init()
-		) {
-			self.drawing = Property(drawing)
-			configuration.style.frame = frame
-			configuration.accessibility = accessibility
+			self.drawing = drawing.asProperty()
+			configuration.style.clip = true
+			configuration.apply(
+				layout: layout,
+				appearance: appearance,
+				interaction: interaction,
+				accessibility: accessibility,
+				lifecycle: lifecycle
+			)
 		}
 	}
 
@@ -61,8 +53,7 @@ public struct STNDrawing: Equatable, Sendable {
 	}
 
 	package func mount(in context: MountContext) {
-		var configuration = properties.configuration
-		configuration.style.clip = true
+		let configuration = properties.configuration
 		configuration.mount(
 			.canvas,
 			in: context,

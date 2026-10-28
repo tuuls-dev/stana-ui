@@ -1,5 +1,9 @@
 # Local Verification — 2026-10-26
 
+For the subsequent hybrid Metal renderer implementation and current verification, see [Metal verification](Metal.md). The original CPU-renderer evidence below is historical.
+
+For the generic property inputs, shared capability groups, reactive layout/font, and current API migration checks, see [Shared properties verification](SharedProperties.md).
+
 ## Configuration
 
 - Host: macOS 27.0.1, Apple Silicon (`arm64`).

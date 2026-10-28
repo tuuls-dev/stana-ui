@@ -62,6 +62,7 @@ import StanaPrimitives
 		native.shouldClose = { [weak owner] in owner?.properties.shouldClose?() ?? true }
 		native.onCommand = { [weak self] id in self?.toolbarActions[id]?.perform() }
 		session.document.surfaceBackground = applied.appearance.background
+		session.document.renderingColorMode = applied.renderingColorMode
 		session.document.windowBackgroundDragging =
 			applied.interaction.backgroundDragging && applied.interaction.isMovable
 		session.attach(native)
@@ -134,6 +135,12 @@ import StanaPrimitives
 		}
 
 		owner.stateSource.value = state
+		if !state.isVisible || state.isMinimized {
+			for registration in session.frameRegistrations { registration.lastTimestamp = nil }
+			for (_, mount) in chromeSessions.values {
+				for registration in mount.frameRegistrations { registration.lastTimestamp = nil }
+			}
+		}
 		if session.document.viewport != state.contentSize {
 			session.document.viewport = state.contentSize
 			session.document.changed(session.document.root, .all)
@@ -193,6 +200,11 @@ import StanaPrimitives
 				}
 
 				session.document.surfaceBackground = effective.appearance.background
+				session.document.renderingColorMode = effective.renderingColorMode
+				for (_, chrome) in chromeSessions.values {
+					chrome.document.renderingColorMode = effective.renderingColorMode
+					chrome.document.changed(chrome.document.root, .paint)
+				}
 				session.document.windowBackgroundDragging =
 					effective.interaction.backgroundDragging && effective.interaction.isMovable
 				session.document.changed(session.document.root, .all)
@@ -310,6 +322,7 @@ import StanaPrimitives
 		let mount = MountSession(size: size, text: host.textService, environment: session.environment)
 		mount.onStable = { [weak self] in self?.flushPending() }
 		mount.document.surfaceBackground = .clear
+		mount.document.renderingColorMode = applied.renderingColorMode
 		mount.attach(window)
 		mount.mount(content)
 		chromeSessions[id] = (identity, mount)
@@ -346,7 +359,7 @@ import StanaPrimitives
 							result.tooltip = tooltip
 							result.priority = Int32(clamping: priority)
 
-							@MainActor func observe<V>(_ property: Property<V>) {
+							@MainActor func observe<V: Equatable>(_ property: Property<V>) {
 								guard property.reactive else {
 									return
 								}

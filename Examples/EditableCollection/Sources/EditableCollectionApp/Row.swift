@@ -13,11 +13,11 @@ import Stana
 	}
 
 	func makeContent(in context: STNComponentContext) -> some STNComponent {
-		STNHStack(properties: .init(alignment: .center, spacing: 12, padding: 8)) {
+		STNHStack(properties: .init(alignment: .center, spacing: 12, layout: .init(padding: STNInsets(8)))) {
 			STNTextField(
 				properties: .init(
 					value: properties.todo.title.binding,
-					frame: .init(width: 260),
+					layout: .init(frame: STNFrame(width: 260)),
 					accessibility: .init(label: "Task title")
 				)
 			)

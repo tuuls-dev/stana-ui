@@ -2,6 +2,7 @@ import Foundation
 import Stana
 import StanaAccessibility
 import StanaCore
+import StanaGraphics
 import StanaPrimitives
 import StanaScene
 import StanaText
@@ -10,6 +11,45 @@ import StanaText
 @MainActor public final class STNTestHost {
 	private let session: MountSession
 	private var backingRevision: UInt64 = 0
+	private var presentation = PresentationTracker()
+	private var submissionSequence: UInt64 = 0
+	private var attempts: [UInt64: (PresentationAttemptID, PresentationGeometry)] = [:]
+
+	/// Uses the same last-confirmed/unknown-failure policy as native interaction.
+	public func enablePresentationTesting() {
+		session.document.usesPresentationGeometry = true
+	}
+
+	public func reportGPUCompletion(submission: UInt64, success: Bool) {
+		guard let (id, geometry) = attempts[submission] else { return }
+		if presentation.gpu(id, success: success) {
+			session.document.publishPresentation(
+				geometry,
+				confirmed: true,
+				preserveAmbiguity: presentation.ambiguous != nil
+			)
+		} else if !success {
+			session.document.publishPresentation(geometry, confirmed: false)
+		}
+	}
+
+	public func reportPresentation(submission: UInt64, timestamp: Double) {
+		guard let (id, geometry) = attempts[submission] else { return }
+		if presentation.presented(id, timestamp: timestamp) {
+			session.document.publishPresentation(
+				geometry,
+				confirmed: true,
+				preserveAmbiguity: presentation.ambiguous != nil
+			)
+			attempts = attempts.filter { $0.key >= submission }
+		}
+	}
+
+	public func reportPresentationUnknown(submission: UInt64) {
+		guard let (id, geometry) = attempts[submission] else { return }
+		presentation.markUnknown(id)
+		if presentation.ambiguous == id { session.document.publishPresentation(geometry, confirmed: false) }
+	}
 
 	public init(size: STNSize = .init(width: 800, height: 600), environment: STNEnvironment = .init()) {
 		session = MountSession(size: size, text: TestTextService(), environment: environment)
@@ -58,6 +98,12 @@ import StanaText
 
 	public func flush() {
 		session.commit()
+	}
+
+	/// Runs one admitted animation transaction using an explicit monotonic clock.
+	public func advanceFrame(timestamp: Double, targetTimestamp: Double) {
+		precondition(timestamp.isFinite && targetTimestamp.isFinite && targetTimestamp >= timestamp)
+		session.tickFrames(timestamp: timestamp, target: targetTimestamp)
 	}
 
 	public func activate(_ id: STNNodeID) throws {
@@ -136,6 +182,10 @@ import StanaText
 		}
 
 		let scene = session.scene.build(surfaceEpoch: 1, backingRevision: backingRevision)
+		nextRevision(&submissionSequence)
+		let id = PresentationAttemptID(epoch: 1, sequence: submissionSequence, scene: scene.sceneRevision)
+		presentation.submitted(id)
+		if let geometry = scene.geometry { attempts[submissionSequence] = (id, geometry) }
 		if acknowledge {
 			backingRevision = scene.sceneRevision
 		}
@@ -144,7 +194,8 @@ import StanaText
 			documentRevision: scene.documentRevision,
 			sceneRevision: scene.sceneRevision,
 			damage: scene.damage,
-			commandCount: scene.commands.count
+			commandCount: scene.commands.count,
+			submissionSequence: submissionSequence
 		)
 	}
 
@@ -176,6 +227,7 @@ public struct STNRecordedFrame: Sendable {
 	public let sceneRevision: UInt64
 	public let damage: [STNRect]
 	public let commandCount: Int
+	public let submissionSequence: UInt64
 }
 
 public struct STNEditorSnapshot: Equatable, Sendable {

@@ -26,17 +26,17 @@ struct PreferencesApp {
 			}
 		)
 		let window = STNWindow(properties: .init(title: "Preferences", size: .init(width: 520, height: 420))) {
-			STNVStack(properties: .init(spacing: 20, padding: 28)) {
+			STNVStack(properties: .init(spacing: 20, layout: .init(padding: STNInsets(28)))) {
 				STNText(
 					properties: .init(
 						text: "Preferences",
-						font: .system(size: 26, weight: .bold),
+						textStyle: .init(font: STNFont.system(size: 26, weight: .bold)),
 						accessibility: .init(heading: 1)
 					)
 				)
 				LabelledField(properties: .init(title: "Display name", value: name.binding))
 				STNToggle(properties: .init(text: "Notifications", isOn: notifications.binding))
-				STNText(properties: .init(text: status, foreground: .secondaryText))
+				STNText(properties: .init(text: status, textStyle: .init(foreground: STNColor.secondaryText)))
 				STNButton(properties: .init(text: "Save Preferences…", onActivate: { save.perform() }))
 			}
 		}

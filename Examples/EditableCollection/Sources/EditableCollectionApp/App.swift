@@ -5,11 +5,11 @@ struct EditableCollectionApp {
 	@MainActor static func main() {
 		let model = Model()
 		let window = STNWindow(properties: .init(title: "Editable Collection", size: .init(width: 650, height: 500))) {
-			STNVStack(properties: .init(spacing: 16, padding: 24)) {
+			STNVStack(properties: .init(spacing: 16, layout: .init(padding: STNInsets(24)))) {
 				STNText(
 					properties: .init(
 						text: "Tasks",
-						font: .system(size: 26, weight: .bold),
+						textStyle: .init(font: STNFont.system(size: 26, weight: .bold)),
 						accessibility: .init(heading: 1)
 					)
 				)
@@ -17,7 +17,7 @@ struct EditableCollectionApp {
 					STNButton(properties: .init(text: "Add Task", onActivate: { model.add() }))
 					STNButton(properties: .init(text: "Reverse Order", onActivate: { model.reverse() }))
 				}
-				STNScrollView(properties: .init(frame: .init(width: 600, height: 340))) {
+				STNScrollView(properties: .init(layout: .init(frame: STNFrame(width: 600, height: 340)))) {
 					STNVStack(properties: .init(spacing: 8)) {
 						STNForEach(observableRows: model.rows, id: \.id) { todo in
 							TodoRow(properties: .init(todo: todo, onRemove: { model.remove(todo.id) }))

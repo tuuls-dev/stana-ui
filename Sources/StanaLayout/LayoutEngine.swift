@@ -95,7 +95,7 @@ import StanaText
 			}
 		case .spacer: break
 		case .image: intrinsic = .init(width: 64, height: 64)
-		case .canvas: intrinsic = .init(width: 100, height: 100)
+		case .canvas, .gpuCanvas: intrinsic = .init(width: 100, height: 100)
 		case .hStack, .vStack:
 			let horizontal = node.kind == .hStack
 			let maxMain = horizontal ? inner.maxWidth : inner.maxHeight

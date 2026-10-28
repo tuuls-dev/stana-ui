@@ -1,4 +1,5 @@
 import StanaPlatform
+import StanaPrimitives
 
 extension STNWindow {
 	/// One interface for every host. Unavailable features are ignored and
@@ -15,6 +16,7 @@ extension STNWindow {
 		public typealias Preference = STNWindowOptions.Preference
 		package var options: STNWindowOptions
 		public var chrome: Chrome
+		public var renderingColorMode: STNRenderingColorMode
 
 		public var creation: Creation {
 			get {
@@ -97,7 +99,8 @@ extension STNWindow {
 			behavior: Behavior = .init(),
 			workspaces: Workspaces = .init(),
 			systemIntegration: SystemIntegration = .init(),
-			chrome: Chrome = .init()
+			chrome: Chrome = .init(),
+			renderingColorMode: STNRenderingColorMode = .automatic
 		) {
 			options = .init(
 				creation: creation,
@@ -110,6 +113,7 @@ extension STNWindow {
 				systemIntegration: systemIntegration
 			)
 			self.chrome = chrome
+			self.renderingColorMode = renderingColorMode
 		}
 	}
 

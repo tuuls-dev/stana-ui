@@ -12,16 +12,18 @@ import Testing
 		host.mount {
 			STNBox(
 				properties: .init(
-					frame: .init(width: 200, height: 100),
-					onPointerDown: { event in
-						phases.append(event.phase)
-						observedWidth = try? boxHandle?.bounds().size.width
-					},
-					onPointerDownCapture: { event in
-						phases.append(event.phase)
-						visible.value = false
-					},
-					onMount: { boxHandle = $0 }
+					layout: .init(frame: STNFrame(width: 200, height: 100)),
+					interaction: .init(
+						onPointerDown: { event in
+							phases.append(event.phase)
+							observedWidth = try? boxHandle?.bounds().size.width
+						},
+						onPointerDownCapture: { event in
+							phases.append(event.phase)
+							visible.value = false
+						}
+					),
+					lifecycle: .init(onMount: { boxHandle = $0 })
 				)
 			) {
 				STNIf(visible) { STNButton(properties: .init(text: "Remove on down", onActivate: {})) }
@@ -43,9 +45,11 @@ import Testing
 		host.mount {
 			STNBox(
 				properties: .init(
-					frame: .init(width: 200, height: 100),
-					onPointerUp: { $0.preventDefault() },
-					onPointerCancel: { _ in cancellations += 1 }
+					layout: .init(frame: STNFrame(width: 200, height: 100)),
+					interaction: .init(
+						onPointerUp: { $0.preventDefault() },
+						onPointerCancel: { _ in cancellations += 1 }
+					)
 				)
 			) {
 				STNButton(properties: .init(text: "Press", onActivate: { activations += 1 }))
@@ -79,7 +83,7 @@ import Testing
 	@Test func keyboardFocusRealizesCurrentScrollGeometry() throws {
 		let host = STNTestHost(size: .init(width: 200, height: 150))
 		host.mount {
-			STNScrollView(properties: .init(frame: .init(width: 200, height: 100))) {
+			STNScrollView(properties: .init(layout: .init(frame: STNFrame(width: 200, height: 100)))) {
 				STNVStack(properties: .init(spacing: 8)) {
 					for index in 0..<8 {
 						STNButton(properties: .init(text: "Button \(index)", onActivate: {}))

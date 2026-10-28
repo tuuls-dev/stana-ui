@@ -1,5 +1,6 @@
 import StanaCore
 import StanaPlatform
+import StanaPlatformMacOS
 import StanaPrimitives
 
 @MainActor public final class STNWindow {
@@ -12,143 +13,15 @@ import StanaPrimitives
 		public let onConfigurationError: (@MainActor (STNWindowError) -> Void)?
 
 		public init(
-			title: String,
+			title: some STNPropertyConvertible<String>,
 			size: STNSize = .init(width: 800, height: 600),
 			environment: STNEnvironment = .init(),
-			configuration: Configuration = .init(),
+			configuration: some STNPropertyConvertible<Configuration> = Configuration(),
 			shouldClose: (@MainActor () -> Bool)? = nil,
 			onConfigurationError: (@MainActor (STNWindowError) -> Void)? = nil
 		) {
-			self.title = Property(title)
-			self.configuration = Property(configuration)
-			self.size = size
-			self.environment = environment
-			self.shouldClose = shouldClose
-			self.onConfigurationError = onConfigurationError
-		}
-
-		public init(
-			title: String,
-			size: STNSize = .init(width: 800, height: 600),
-			environment: STNEnvironment = .init(),
-			configuration: STNSignal<Configuration>,
-			shouldClose: (@MainActor () -> Bool)? = nil,
-			onConfigurationError: (@MainActor (STNWindowError) -> Void)? = nil
-		) {
-			self.title = Property(title)
-			self.configuration = Property(configuration)
-			self.size = size
-			self.environment = environment
-			self.shouldClose = shouldClose
-			self.onConfigurationError = onConfigurationError
-		}
-
-		public init(
-			title: String,
-			size: STNSize = .init(width: 800, height: 600),
-			environment: STNEnvironment = .init(),
-			configuration: STNComputed<Configuration>,
-			shouldClose: (@MainActor () -> Bool)? = nil,
-			onConfigurationError: (@MainActor (STNWindowError) -> Void)? = nil
-		) {
-			self.title = Property(title)
-			self.configuration = Property(configuration)
-			self.size = size
-			self.environment = environment
-			self.shouldClose = shouldClose
-			self.onConfigurationError = onConfigurationError
-		}
-
-		public init(
-			title: STNSignal<String>,
-			size: STNSize = .init(width: 800, height: 600),
-			environment: STNEnvironment = .init(),
-			configuration: Configuration = .init(),
-			shouldClose: (@MainActor () -> Bool)? = nil,
-			onConfigurationError: (@MainActor (STNWindowError) -> Void)? = nil
-		) {
-			self.title = Property(title)
-			self.configuration = Property(configuration)
-			self.size = size
-			self.environment = environment
-			self.shouldClose = shouldClose
-			self.onConfigurationError = onConfigurationError
-		}
-
-		public init(
-			title: STNSignal<String>,
-			size: STNSize = .init(width: 800, height: 600),
-			environment: STNEnvironment = .init(),
-			configuration: STNSignal<Configuration>,
-			shouldClose: (@MainActor () -> Bool)? = nil,
-			onConfigurationError: (@MainActor (STNWindowError) -> Void)? = nil
-		) {
-			self.title = Property(title)
-			self.configuration = Property(configuration)
-			self.size = size
-			self.environment = environment
-			self.shouldClose = shouldClose
-			self.onConfigurationError = onConfigurationError
-		}
-
-		public init(
-			title: STNSignal<String>,
-			size: STNSize = .init(width: 800, height: 600),
-			environment: STNEnvironment = .init(),
-			configuration: STNComputed<Configuration>,
-			shouldClose: (@MainActor () -> Bool)? = nil,
-			onConfigurationError: (@MainActor (STNWindowError) -> Void)? = nil
-		) {
-			self.title = Property(title)
-			self.configuration = Property(configuration)
-			self.size = size
-			self.environment = environment
-			self.shouldClose = shouldClose
-			self.onConfigurationError = onConfigurationError
-		}
-
-		public init(
-			title: STNComputed<String>,
-			size: STNSize = .init(width: 800, height: 600),
-			environment: STNEnvironment = .init(),
-			configuration: Configuration = .init(),
-			shouldClose: (@MainActor () -> Bool)? = nil,
-			onConfigurationError: (@MainActor (STNWindowError) -> Void)? = nil
-		) {
-			self.title = Property(title)
-			self.configuration = Property(configuration)
-			self.size = size
-			self.environment = environment
-			self.shouldClose = shouldClose
-			self.onConfigurationError = onConfigurationError
-		}
-
-		public init(
-			title: STNComputed<String>,
-			size: STNSize = .init(width: 800, height: 600),
-			environment: STNEnvironment = .init(),
-			configuration: STNSignal<Configuration>,
-			shouldClose: (@MainActor () -> Bool)? = nil,
-			onConfigurationError: (@MainActor (STNWindowError) -> Void)? = nil
-		) {
-			self.title = Property(title)
-			self.configuration = Property(configuration)
-			self.size = size
-			self.environment = environment
-			self.shouldClose = shouldClose
-			self.onConfigurationError = onConfigurationError
-		}
-
-		public init(
-			title: STNComputed<String>,
-			size: STNSize = .init(width: 800, height: 600),
-			environment: STNEnvironment = .init(),
-			configuration: STNComputed<Configuration>,
-			shouldClose: (@MainActor () -> Bool)? = nil,
-			onConfigurationError: (@MainActor (STNWindowError) -> Void)? = nil
-		) {
-			self.title = Property(title)
-			self.configuration = Property(configuration)
+			self.title = title.asProperty()
+			self.configuration = configuration.asProperty()
 			self.size = size
 			self.environment = environment
 			self.shouldClose = shouldClose
@@ -183,6 +56,17 @@ import StanaPrimitives
 
 	public func close() {
 		controller?.close()
+	}
+
+	/// Asynchronously reads the complete last successful offscreen scene.
+	public func capture() async throws -> STNRenderedImage {
+		guard let native = try native as? MacOSWindow else { throw STNError.unsupportedPlatform }
+		return try await native.capture()
+	}
+
+	public func renderingDiagnostics() async throws -> STNRenderingDiagnostics {
+		guard let native = try native as? MacOSWindow else { throw STNError.unsupportedPlatform }
+		return try await native.renderingDiagnostics()
 	}
 
 	package func open(using host: any PlatformHost, show: Bool = true) throws {

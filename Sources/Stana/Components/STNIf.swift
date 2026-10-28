@@ -7,21 +7,11 @@ import StanaPrimitives
 	private let elseContent: () -> STNGroup
 
 	public init(
-		_ condition: STNSignal<Bool>,
+		_ condition: some STNPropertyConvertible<Bool>,
 		@STNBuilder then content: @escaping () -> STNGroup,
 		@STNBuilder else alternative: @escaping () -> STNGroup = { STNGroup() }
 	) {
-		self.condition = Property(condition)
-		thenContent = content
-		elseContent = alternative
-	}
-
-	public init(
-		_ condition: STNComputed<Bool>,
-		@STNBuilder then content: @escaping () -> STNGroup,
-		@STNBuilder else alternative: @escaping () -> STNGroup = { STNGroup() }
-	) {
-		self.condition = Property(condition)
+		self.condition = condition.asProperty()
 		thenContent = content
 		elseContent = alternative
 	}

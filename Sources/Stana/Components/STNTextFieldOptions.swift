@@ -64,12 +64,7 @@ extension STNTextField {
 	public struct Options: Equatable, Sendable {
 		public var isReadOnly: Bool
 		public var alignment: TextAlignment
-		public var foreground: STNColor
 		public var placeholderColor: STNColor
-		public var background: STNColor
-		public var borderColor: STNColor
-		public var borderWidth: Double
-		public var cornerRadius: Double
 		public var selectionColor: STNColor
 		public var caretColor: STNColor
 		public var textServices: TextServices
@@ -77,24 +72,14 @@ extension STNTextField {
 		public init(
 			isReadOnly: Bool = false,
 			alignment: TextAlignment = .leading,
-			foreground: STNColor = .text,
 			placeholderColor: STNColor = .secondaryText,
-			background: STNColor = .surface,
-			borderColor: STNColor = .border,
-			borderWidth: Double = 1,
-			cornerRadius: Double = 5,
 			selectionColor: STNColor = .accent,
 			caretColor: STNColor = .text,
 			textServices: TextServices = .init()
 		) {
 			self.isReadOnly = isReadOnly
 			self.alignment = alignment
-			self.foreground = foreground
 			self.placeholderColor = placeholderColor
-			self.background = background
-			self.borderColor = borderColor
-			self.borderWidth = borderWidth
-			self.cornerRadius = cornerRadius
 			self.selectionColor = selectionColor
 			self.caretColor = caretColor
 			self.textServices = textServices

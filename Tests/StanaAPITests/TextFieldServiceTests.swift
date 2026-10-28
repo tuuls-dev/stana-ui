@@ -8,21 +8,27 @@ import Testing
 @testable import StanaScene
 
 @Suite @MainActor struct TextFieldServiceTests {
-	@Test func fieldOptionsOwnTheBackgroundForConstantAndReactiveInputs() throws {
+	@Test func sharedAppearanceOwnsTheBackgroundForConstantAndReactiveInputs() throws {
 		let value = STNSignal("")
-		let options = STNSignal(STNTextField.Options(background: .black))
+		let background = STNSignal(STNColor.black)
 		let session = MountSession(size: .init(width: 300, height: 100), text: TestTextService())
 		mount(session) {
 			STNVStack {
 				STNTextField(properties: .init(value: value.binding))
-				STNTextField(properties: .init(value: value.binding, options: .init(background: .black)))
-				STNTextField(properties: .init(value: value.binding, options: options))
+				STNTextField(
+					properties: .init(
+						value: value.binding,
+						options: STNTextField.Options(),
+						appearance: .init(background: STNColor.black)
+					)
+				)
+				STNTextField(properties: .init(value: value.binding, appearance: .init(background: background)))
 			}
 		}
 		defer { session.close() }
 		let nodes = session.document.orderedNodes.filter { $0.kind == .textField }
 		#expect(nodes.map { $0.style.background } == [.surface, .black, .black])
-		options.value.background = .accent
+		background.value = .accent
 		#expect(nodes[2].style.background == .accent)
 	}
 
@@ -106,7 +112,11 @@ import Testing
 		let session = MountSession(size: .init(width: 300, height: 100), text: TestTextService())
 		mount(session) {
 			STNTextField(
-				properties: .init(value: value.binding, frame: .init(width: 200), options: .init(alignment: .trailing))
+				properties: .init(
+					value: value.binding,
+					options: STNTextField.Options(alignment: .trailing),
+					layout: .init(frame: STNFrame(width: 200))
+				)
 			)
 		}
 		defer { session.close() }

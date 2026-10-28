@@ -7,15 +7,20 @@ struct CounterApp {
 		let count = STNSignal(0)
 		let increment = STNCommand(properties: .init(title: "Increment", shortcut: .init("i")) { count.value += 1 })
 		let window = STNWindow(properties: .init(title: "Stana Counter", size: .init(width: 480, height: 320))) {
-			STNVStack(properties: .init(alignment: .leading, spacing: 16, padding: 28)) {
+			STNVStack(properties: .init(alignment: .leading, spacing: 16, layout: .init(padding: STNInsets(28)))) {
 				STNText(
 					properties: .init(
 						text: "A retained Swift desktop UI",
-						font: .system(size: 24, weight: .semibold),
+						textStyle: .init(font: STNFont.system(size: 24, weight: .semibold)),
 						accessibility: .init(heading: 1)
 					)
 				)
-				STNText(properties: .init(text: count.map { "Count: \($0)" }, font: .system(size: 20)))
+				STNText(
+					properties: .init(
+						text: count.map { "Count: \($0)" },
+						textStyle: .init(font: STNFont.system(size: 20))
+					)
+				)
 				STNButton(
 					properties: .init(
 						text: "Increment",
@@ -24,7 +29,10 @@ struct CounterApp {
 					)
 				)
 				STNText(
-					properties: .init(text: "The label updates. Its parent never rebuilds.", foreground: .secondaryText)
+					properties: .init(
+						text: "The label updates. Its parent never rebuilds.",
+						textStyle: .init(foreground: STNColor.secondaryText)
+					)
 				)
 			}
 		}

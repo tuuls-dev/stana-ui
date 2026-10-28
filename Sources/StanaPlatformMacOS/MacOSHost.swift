@@ -39,7 +39,8 @@ import StanaText
 	package var operationSerial: UInt64 = 0
 	package var operations: [UInt64: CheckedContinuation<Int32, any Error>] = [:]
 	package var onText: ((Int32, String, NSRange?, NSRange, UInt64, UInt64) -> Void)?
-	private var graphics: CoreGraphicsRenderer!
+	package var graphics: MetalRenderer!
+	package var onFrame: ((Double, Double) -> Void)?
 	private var semantics: MacOSAccessibility!
 
 	package var renderer: any Renderer {
@@ -113,7 +114,12 @@ import StanaText
 			throw STNError.nativeFailure("Could not create native window")
 		}
 
-		graphics = CoreGraphicsRenderer(window: self)
+		do {
+			graphics = try MetalRenderer(window: self)
+		} catch {
+			close()
+			throw error
+		}
 		semantics = MacOSAccessibility(window: self)
 		installWindowCallbacks()
 		do {
@@ -131,6 +137,10 @@ import StanaText
 		if let handle {
 			stn_window_show(handle)
 		}
+	}
+
+	package func setAnimationDemand(_ active: Bool) {
+		if let handle { stn_metal_animation(handle, active) }
 	}
 
 	package func requestRedraw() {
@@ -169,6 +179,8 @@ import StanaText
 
 	package func receive(_ e: stn_event) {
 		switch e.kind {
+		case 16: onFrame?(e.x, e.y)
+		case 17...24: graphics?.receive(e)
 		case 1:
 			graphics?.invalidate()
 			onEvent?(.resize(.init(width: max(0, e.x), height: max(0, e.y)), e.a))
@@ -211,7 +223,10 @@ import StanaText
 		offsets: [Double],
 		revision: UInt64,
 		secure: Bool,
-		nodeID: UInt64? = nil
+		nodeID: UInt64? = nil,
+		transform: STNAffineTransform = .identity,
+		geometryMatches: Bool = true,
+		geometryRevision: UInt64 = 0
 	) {
 		guard let handle else {
 			return
@@ -219,6 +234,33 @@ import StanaText
 
 		text.withNativeUTF8 { nativeText in
 			offsets.withUnsafeBufferPointer { buffer in
+				if transform != .identity || !geometryMatches || geometryRevision != 0 {
+					stn_window_text_geometry(
+						handle,
+						nodeID ?? 0,
+						nativeText,
+						UInt64(selection.location),
+						UInt64(selection.length),
+						marked.location == NSNotFound ? UInt64.max : UInt64(marked.location),
+						UInt64(marked.length),
+						bounds.native,
+						buffer.baseAddress,
+						buffer.count,
+						revision,
+						secure,
+						stn_affine(
+							a: transform.a,
+							b: transform.b,
+							c: transform.c,
+							d: transform.d,
+							tx: transform.tx,
+							ty: transform.ty
+						),
+						geometryMatches,
+						geometryRevision
+					)
+					return
+				}
 				if let nodeID {
 					stn_window_semantic_text(
 						handle,
