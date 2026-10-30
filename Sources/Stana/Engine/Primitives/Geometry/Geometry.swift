@@ -145,11 +145,35 @@ public struct STNFrame: Hashable, Sendable {
 	public var width: Double?
 	public var height: Double?
 	public var minWidth: Double
-	public var maxWidth: Double
 	public var minHeight: Double
-	public var maxHeight: Double
-	package let fillsWidth: Bool
-	package let fillsHeight: Bool
+	private var resolvedMaxWidth: Double
+	private var resolvedMaxHeight: Double
+	package private(set) var fillsWidth: Bool
+	package private(set) var fillsHeight: Bool
+
+	/// The width limit. Assigning infinity requests filling; an omitted initial maximum does not.
+	public var maxWidth: Double {
+		get {
+			resolvedMaxWidth
+		}
+
+		set {
+			resolvedMaxWidth = newValue
+			fillsWidth = newValue == .infinity
+		}
+	}
+
+	/// The height limit. Assigning infinity requests filling; an omitted initial maximum does not.
+	public var maxHeight: Double {
+		get {
+			resolvedMaxHeight
+		}
+
+		set {
+			resolvedMaxHeight = newValue
+			fillsHeight = newValue == .infinity
+		}
+	}
 
 	public init(
 		width: Double? = nil,
@@ -170,9 +194,9 @@ public struct STNFrame: Hashable, Sendable {
 		self.width = width
 		self.height = height
 		self.minWidth = minWidth
-		self.maxWidth = resolvedMaxWidth
 		self.minHeight = minHeight
-		self.maxHeight = resolvedMaxHeight
+		self.resolvedMaxWidth = resolvedMaxWidth
+		self.resolvedMaxHeight = resolvedMaxHeight
 		fillsWidth = maxWidth == .infinity
 		fillsHeight = maxHeight == .infinity
 	}

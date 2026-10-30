@@ -35,6 +35,23 @@ Sharing a group does not share a node or its lifetime. Each mounted component ow
 
 Text styling is local to a text-bearing component, not inherited by descendants. Component-specific properties remain direct arguments: bindings, actions, content, stack spacing/alignment, editor options/callbacks, drawings, transforms, and backdrop effects.
 
+## Frame maximums and filling
+
+An omitted `STNFrame` maximum has the numeric value `.infinity`, but does not request filling. Explicitly supplying or assigning `.infinity` to `maxWidth` or `maxHeight` requests filling on that axis when the available size is bounded. Assigning a finite maximum clears that axis's fill intent; it caps the size without requesting growth. The other axis is unchanged. Fixed `width` and `height` take precedence over fill allocation, and unbounded proposals remain content-sized subject to the frame's minimums.
+
+```swift
+var frame = STNFrame()          // Content-sized; both maximums read as infinity.
+frame.maxWidth = .infinity      // Same fill intent as STNFrame(maxWidth: .infinity).
+frame.maxWidth = 200            // Cap width at 200 without filling.
+frame.maxHeight = .infinity     // Request vertical filling only.
+
+let sizing = STNSignal(frame)
+STNBox(properties: .init(layout: .init(frame: sizing))) {}
+sizing.value.maxWidth = .infinity
+```
+
+Copies retain fill intent. Equality and hashing distinguish an omitted maximum from an explicitly infinite maximum, even though their numeric values match, so reactive frame updates observe changes in fill intent. Replacing the value with `STNFrame()` restores the omitted-maximum behavior.
+
 ## Generic reactive inputs
 
 `STNPropertyConvertible<Value>` converts an input with `asProperty()` into `STNProperty<Value>`. Supported ordinary values, signals, and computeds conform. Conversion preserves the source without reading its current value. Reading a signal’s `.value` yourself during construction still captures a constant.
