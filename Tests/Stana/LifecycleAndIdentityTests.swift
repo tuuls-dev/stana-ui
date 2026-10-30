@@ -15,6 +15,31 @@ import Testing
 }
 
 @Suite @MainActor struct LifecycleAndIdentityTests {
+	@Test func removingComposedBranchDisposesItsNodesAndBindings() throws {
+		let shown = STNSignal(true)
+		let text = STNSignal("initial")
+		let host = STNTestHost()
+		host.mount {
+			STNVStack {
+				STNIf(shown) { BoundLabel(properties: .init(text: text)) }
+				STNText(properties: .init(text: "persistent"))
+			}
+		}
+		let branchID = try #require(host.nodes.first { $0.text == "initial" }?.id)
+		let siblingID = try #require(host.nodes.first { $0.text == "persistent" }?.id)
+		shown.value = false
+		#expect(!host.nodeIDs.contains(branchID))
+		#expect(host.nodes.first { $0.text == "persistent" }?.id == siblingID)
+		let updates = host.metrics.propertyUpdates
+		text.value = "current"
+		#expect(host.metrics.propertyUpdates == updates)
+		shown.value = true
+		let remounted = try #require(host.nodes.first { $0.text == "current" })
+		#expect(remounted.id != branchID)
+		#expect(host.nodes.first { $0.text == "persistent" }?.id == siblingID)
+		host.close()
+	}
+
 	@Test func observableRowsPreserveCompositionFocusAndUndoAcrossMoves() throws {
 		let a = Row(1, "A")
 		let b = Row(2, "B")
@@ -147,5 +172,17 @@ import Testing
 		context.own(subscription)
 		context.onDispose { properties.events.disposals += 1 }
 		STNText(properties: .init(text: properties.model))
+	}
+}
+
+@MainActor private struct BoundLabel: STNComponent {
+	struct Properties {
+		let text: STNSignal<String>
+	}
+
+	let properties: Properties
+
+	func makeContent(in context: STNComponentContext) -> some STNComponent {
+		STNText(properties: .init(text: properties.text))
 	}
 }

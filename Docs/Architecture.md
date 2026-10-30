@@ -110,6 +110,8 @@ Transactions batch synchronously and do not roll back source writes. All queued 
 
 A mounted scope owns subscriptions, child scopes, tasks, and cleanup. Disposal marks it dead before cancellation, invalidates handles, and queues application cleanup after commit. Request tokens distinguish both scope lifetime and superseded work. Hiding is not disposal; `STNIf` removal is.
 
+Lifetime resources use token-indexed ordered registrations with expected O(1) unregister. Reattaching to the same live owner is idempotent and preserves registration position. Disposal detaches the registrations before invoking cancellations in insertion order, so reentrant mutations cannot alter the captured disposal snapshot.
+
 Keyed value rows retain their scope but replace descendants when unequal. Observable reference rows retain descendants and require the same instance for an existing key. Duplicate keys and changed observable instances reject the update before tree mutation.
 
 ## Projections and native services
