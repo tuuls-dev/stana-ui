@@ -35,6 +35,8 @@ Sharing a group does not share a node or its lifetime. Each mounted component ow
 
 Text styling is local to a text-bearing component, not inherited by descendants. Component-specific properties remain direct arguments: bindings, actions, content, stack spacing/alignment, editor options/callbacks, drawings, transforms, and backdrop effects.
 
+Linear stacks accept spacing and `STNAlignment`. ZStack accepts only `STNZStack.Alignment` and defaults to centered overlays; see <doc:LayoutContainers> for placement and migration guidance.
+
 ## Generic reactive inputs
 
 `STNPropertyConvertible<Value>` converts an input with `asProperty()` into `STNProperty<Value>`. Supported ordinary values, signals, and computeds conform. Conversion preserves the source without reading its current value. Reading a signal’s `.value` yourself during construction still captures a constant.

@@ -1,22 +1,33 @@
 import StanaCore
 import StanaPrimitives
 
+/// Overlays children in declaration order, centered vertically within its padded content rectangle.
 @MainActor public struct STNZStack: STNComponent, PrimitiveComponent {
+	/// Horizontal alignment resolved using the document's layout direction.
+	public enum Alignment: Equatable, Sendable {
+		case leading, center, trailing
+
+		package var nodeAlignment: STNAlignment {
+			switch self {
+			case .leading: .leading
+			case .center: .center
+			case .trailing: .trailing
+			}
+		}
+	}
+
 	@MainActor public struct Properties {
 		package var configuration = NodeConfiguration()
 
 		public init(
-			alignment: STNAlignment = .leading,
-			spacing: Double = 0,
+			alignment: Alignment = .center,
 			layout: STNLayoutProperties = .init(),
 			appearance: STNAppearanceProperties = .init(),
 			interaction: STNInteractionProperties = .init(),
 			accessibility: STNAccessibilityProperties = .init(),
 			lifecycle: STNLifecycleProperties = .init()
 		) {
-			precondition(spacing.isFinite && spacing >= 0)
-			configuration.style.alignment = alignment
-			configuration.style.spacing = spacing
+			configuration.style.alignment = alignment.nodeAlignment
 			configuration.apply(
 				layout: layout,
 				appearance: appearance,
