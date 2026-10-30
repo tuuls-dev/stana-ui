@@ -18,10 +18,11 @@ Use Swift 6.4 or newer in Swift 6 mode; the deployment target is macOS 26.
 - `just format` / `just check-format`: format repository Swift files, or check formatting without edits.
 - `just build` / `just build-release`: debug/release builds.
 - `just test`: tests with Swift and native warnings treated as errors.
-- `just check`: sequential formatting checks, tests, API fixtures, runtime probes, all example builds, and release build.
+- `just check`: sequential formatting checks, tests, API fixtures, runtime probes, all example builds, release build, and benchmark harness tests (no timing runs).
 - `just example`: launch the Calculator example.
-- `just benchmark`: release-mode headless benchmark, emitting JSON.
-- `just benchmark-native persistent <report.json>`: packaged native workload; keep its window visible and run timing separately from validation/tests.
+- `just benchmark --list`: list independently runnable workloads; see `Benchmarks/README.md` for their contracts.
+- `just benchmark <name> --sizes 100,1000`: run one release-mode headless workload, emitting JSON.
+- `just benchmark-validate` / `just benchmark-test`: untimed fixture validation / benchmark harness tests.
 - `just test-gui`: opt-in GUI tests requiring a logged-in macOS window server.
 
 Direct commands such as `swift build` and `swift test` remain supported.

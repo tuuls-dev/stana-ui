@@ -132,16 +132,17 @@ See [shared configuration and migration](Sources/Stana/Documentation.docc/Shared
 
 Run these commands from the repository root:
 
-| Command                                          | Purpose                                                                                                                     |
-| ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
-| `just`                                           | List available recipes.                                                                                                     |
-| `just build`                                     | Build the library in debug mode.                                                                                            |
-| `just test`                                      | Run tests with Swift and native warnings treated as errors.                                                                 |
-| `just check`                                     | Run formatting, boundary checks, tests, API fixtures, runtime probes, all example builds, and a release build sequentially. |
-| `just format` / `just check-format`              | Format Swift files with the built-in formatter, or check without edits.                                                     |
-| `just test-gui`                                  | Run opt-in native GUI tests in a logged-in macOS session.                                                                   |
-| `just benchmark`                                 | Run the release-mode headless benchmark and print JSON.                                                                     |
-| `just benchmark-native persistent <report.json>` | Run the packaged native workload; keep it visible and separate timing from validation.                                      |
+| Command                                           | Purpose                                                                                                                                              |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `just`                                            | List available recipes.                                                                                                                              |
+| `just build`                                      | Build the library in debug mode.                                                                                                                     |
+| `just test`                                       | Run tests with Swift and native warnings treated as errors.                                                                                          |
+| `just check`                                      | Run formatting, boundary checks, tests, API fixtures, runtime probes, all example builds, a release build, and benchmark harness tests sequentially. |
+| `just format` / `just check-format`               | Format Swift files with the built-in formatter, or check without edits.                                                                              |
+| `just test-gui`                                   | Run opt-in native GUI tests in a logged-in macOS session.                                                                                            |
+| `just benchmark --list`                           | List the independently runnable headless workloads.                                                                                                  |
+| `just benchmark ui-mount --sizes 100,1000`        | Run one release-mode workload; see [benchmark contracts and reporting](Benchmarks/README.md).                                                        |
+| `just benchmark-validate` / `just benchmark-test` | Validate workloads without timings, or run the benchmark harness tests.                                                                              |
 
 Without Just, use `swift build`, `swift test -Xswiftc -warnings-as-errors -Xcc -Werror`, and the scripts described in [CONTRIBUTING.md](CONTRIBUTING.md).
 

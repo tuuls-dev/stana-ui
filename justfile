@@ -50,17 +50,21 @@ build-examples:
 example:
     swift run --package-path Examples/Calculator
 
-# Run the headless benchmark in release mode and print its JSON report.
-benchmark:
-    swift run --package-path Benchmarks -c release StanaBenchmarks
+# Run one named headless workload (or all); use --list to discover workloads.
+benchmark *args:
+    @Scripts/benchmark.sh "$@"
 
-# Run the packaged native rendering benchmark (keep its window visible).
-benchmark-native mode="persistent" output="/tmp/stana-native-benchmark.json":
-    @sh Scripts/benchmark-native.sh "$1" "$2"
+# Check every benchmark workload without collecting timings.
+benchmark-validate:
+    @Scripts/benchmark.sh all --validate --sizes 1,8
+
+# Run benchmark harness tests separately from timing.
+benchmark-test:
+    swift test --package-path Benchmarks -Xswiftc -warnings-as-errors
 
 # Create an unsigned macOS app in dist/ from a consumer package.
 package package-path product bundle-id:
     Scripts/package-macos-app.sh "$1" "$2" "$3"
 
 # Run all non-GUI verification sequentially, stopping on the first failure.
-check: check-format test check-api check-runtime build-examples build-release
+check: check-format test check-api check-runtime build-examples build-release benchmark-test

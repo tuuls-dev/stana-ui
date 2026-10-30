@@ -31,6 +31,6 @@ Window configuration coverage, ignored-feature behavior and remaining manual qua
 
 Text-field behavior, native service coverage, captures, and pending interoperability checks are recorded in [Text-field verification](Verification/TextFields.md).
 
-Hybrid rendering evidence, benchmark commands, and remaining qualification are recorded in [Metal verification](Verification/Metal.md).
+Hybrid rendering correctness evidence and remaining qualification are recorded in [Metal verification](Verification/Metal.md).
 
 The Swift backend’s coordinate-input regression and remaining qualification limits are recorded in [Metal verification](Verification/Metal.md).

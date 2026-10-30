@@ -25,3 +25,5 @@ jobs:
         run: just build-examples
       - name: Release build
         run: swift build -c release -Xswiftc -warnings-as-errors
+      - name: Benchmark harness and workload correctness (no performance timings)
+        run: just benchmark-test
