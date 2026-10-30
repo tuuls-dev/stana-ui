@@ -117,6 +117,10 @@ package struct NodeStyle: Equatable, Sendable {
 	}
 
 	package func attachLifetime(to owner: LifetimeScope) {
+		if scope.isAlive, owner.isAlive, ownerScope === owner, ownershipToken != nil {
+			return
+		}
+
 		if let ownershipToken {
 			ownerScope?.disown(ownershipToken)
 			scope.disown(ownershipToken)

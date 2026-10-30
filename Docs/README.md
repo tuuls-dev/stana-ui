@@ -3,6 +3,7 @@
 Consumer guides live in the [Stana DocC catalog](../Sources/Stana/Documentation.docc). This directory contains contributor-facing architecture, design, and verification documentation.
 
 - [Architecture and source organization](Architecture.md)
+- [Independent performance workloads](../Benchmarks/README.md)
 - [Native implementation boundary](NativeBackend.md)
 - [Platform support and limitations](PlatformSupport.md)
 - [Architecture decisions](Decisions/)

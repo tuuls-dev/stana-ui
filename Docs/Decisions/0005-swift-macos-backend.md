@@ -10,4 +10,4 @@ Identities are process-local typed UInt64 values. Zero is reserved. Isolated dom
 
 macOS 26 remains the minimum. Swift 6.4 compiler availability does not imply macOS 26 runtime availability for every standard-library API. Baseline storage uses owned arrays, fixed-size `InlineArray` presentation uniforms available on macOS 26, and checked isolation, without unchecked sendability, unsafe manifest flags, or experimental prerequisites.
 
-The original backend is captured as a frozen benchmark/parity oracle during qualification; the shipped package has one Swift backend. Benchmark reports distinguish offscreen work from positive presentation observations, and never treat capture or AXPress as proof of coordinate-input readiness.
+The shipped package has one Swift backend; native qualification uses parity regressions rather than a retained benchmark backend. Offscreen work must remain distinct from positive presentation observations; capture or AXPress is not proof of coordinate-input readiness.

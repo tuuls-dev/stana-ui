@@ -2,21 +2,18 @@
 import PackageDescription
 
 let package = Package(
-	name: "StanaBenchmarks",
+	name: "StanaPerformance",
 	platforms: [.macOS(.v26)],
 	dependencies: [.package(path: "..")],
 	targets: [
 		.executableTarget(
-			name: "StanaBenchmarks",
+			name: "StanaPerformance",
 			dependencies: [
 				.product(name: "Stana", package: "stana-ui"),
 				.product(name: "StanaTesting", package: "stana-ui"),
 			]
 		),
-		.executableTarget(
-			name: "NativeRenderingBenchmarks",
-			dependencies: [.product(name: "Stana", package: "stana-ui")],
-			resources: [.copy("Resources")]
-		),
-	]
+		.testTarget(name: "StanaPerformanceTests", dependencies: ["StanaPerformance"]),
+	],
+	swiftLanguageModes: [.v6]
 )

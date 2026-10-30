@@ -4,3 +4,4 @@
 dist/
 *.xcresult
 .vscode
+Benchmarks/Runs/

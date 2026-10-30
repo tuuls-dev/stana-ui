@@ -32,12 +32,6 @@ For the generic property inputs, shared capability groups, reactive layout/font,
 
 The unsigned local artifact is generated at `dist/CounterApp.app`. It is not a signed/notarized release or a clean-machine installation test.
 
-## Benchmark evidence
-
-`Benchmarks/Results/local-arm64-macos27.json` records the release-mode headless 10,000-label fixture. It includes full semantic projection and public test-host snapshots, not just dependency-graph time. The fixture verifies zero remounts/builder executions and retains raw timing samples.
-
-This is a local implementation baseline, not performance qualification, a 60/120 Hz guarantee, or a comparison with another toolkit. Full semantic/scene traversals and conservative stack work remain optimization targets.
-
 ## Not yet qualified
 
 - Real VoiceOver reading, activation, text navigation, secure entry, hot activation, and modal workflows: use `VoiceOver.md`.

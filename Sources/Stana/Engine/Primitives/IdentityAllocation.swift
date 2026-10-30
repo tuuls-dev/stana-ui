@@ -30,7 +30,7 @@ package final class IdentityAllocator: Sendable {
 	}
 }
 
-/// Shared across scopes: an adoption token participates in two resource arrays.
+/// Shared across scopes: an adoption token participates in two scope resource registries.
 @MainActor package enum UIIdentityAllocator {
 	private static var value: UInt64 = 0
 

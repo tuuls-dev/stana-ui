@@ -4,6 +4,54 @@ import Testing
 @testable import StanaCore
 
 @Suite @MainActor struct DocumentTests {
+	@Test func sameOwnerAttachmentPreservesRegistrationPosition() {
+		let owner = LifetimeScope()
+		let node = NodeRecord(id: STNNodeID(document: DocumentID(), serial: 1), kind: .text, scope: LifetimeScope())
+		var log: [String] = []
+		node.scope.own { log.append("child") }
+		node.attachLifetime(to: owner)
+		owner.own { log.append("sentinel") }
+		node.attachLifetime(to: owner)
+		owner.dispose()
+		#expect(log == ["child", "sentinel"])
+	}
+
+	@Test func lifetimeTransferUnlinksBothOldRegistrations() {
+		let a = LifetimeScope()
+		let b = LifetimeScope()
+		let node = NodeRecord(id: STNNodeID(document: DocumentID(), serial: 1), kind: .text, scope: LifetimeScope())
+		var cancellations = 0
+		node.scope.own { cancellations += 1 }
+		node.attachLifetime(to: a)
+		node.attachLifetime(to: a)
+		node.attachLifetime(to: b)
+		node.attachLifetime(to: b)
+		node.attachLifetime(to: a)
+		node.attachLifetime(to: a)
+		b.dispose()
+		#expect(node.scope.isAlive)
+		#expect(cancellations == 0)
+		a.dispose()
+		#expect(!node.scope.isAlive)
+		#expect(cancellations == 1)
+	}
+
+	@Test func attachmentToDeadOwnerDisposesNode() {
+		let a = LifetimeScope()
+		let b = LifetimeScope()
+		b.dispose()
+		let node = NodeRecord(id: STNNodeID(document: DocumentID(), serial: 1), kind: .text, scope: LifetimeScope())
+		var cancellations = 0
+		node.scope.own { cancellations += 1 }
+		node.attachLifetime(to: a)
+		node.attachLifetime(to: b)
+		#expect(!node.scope.isAlive)
+		#expect(cancellations == 1)
+		node.attachLifetime(to: b)
+		a.dispose()
+		#expect(cancellations == 1)
+	}
+
 	@Test func movePreservesIdentityAndTransfersLifetimeOwnership() throws {
 		let document = Document(size: .init(width: 100, height: 100))
 		var a: NodeRecord!
