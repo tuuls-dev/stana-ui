@@ -26,27 +26,28 @@ The authoring facade owns `STNPropertyConvertible`, erased `STNProperty` inputs,
 
 ## Source organization
 
-`Sources/` groups the authoring API, portable engine, platform backends, and consumer testing support. Existing targets remain the module and dependency boundaries; `Package.swift` specifies explicit paths for nested targets. Organizational folders do not introduce additional modules.
+`Sources/Stana` groups the authoring API, composition root, and portable engine under one toolkit directory. Platform backends and consumer testing support remain siblings. Existing targets remain the module and dependency boundaries; `Package.swift` specifies explicit paths for nested engine targets and excludes `Engine` from the `Stana` facade target's source discovery. Organizational folders do not introduce additional modules.
 
 ```text
 Sources/
-├── Stana/                         public authoring API and composition root
-├── Engine/
-│   ├── Primitives/                StanaPrimitives
-│   │   ├── Appearance/
-│   │   ├── Geometry/
-│   │   ├── Rendering/
-│   │   └── Identity.swift
-│   ├── Core/                      StanaCore
-│   │   ├── Document/
-│   │   ├── Input/
-│   │   ├── Lifecycle/
-│   │   └── Reactivity/
-│   ├── Accessibility/             StanaAccessibility
-│   ├── Graphics/                  StanaGraphics
-│   ├── Layout/                    StanaLayout
-│   ├── Scene/                     StanaScene
-│   └── Text/                      StanaText
+├── Stana/                         authoring API, composition root, and engine
+│   └── Engine/
+│       ├── Primitives/            StanaPrimitives
+│       │   ├── Appearance/
+│       │   ├── Geometry/
+│       │   ├── Rendering/
+│       │   ├── Identity.swift
+│       │   └── IdentityAllocation.swift
+│       ├── Core/                  StanaCore
+│       │   ├── Document/
+│       │   ├── Input/
+│       │   ├── Lifecycle/
+│       │   └── Reactivity/
+│       ├── Accessibility/         StanaAccessibility
+│       ├── Graphics/              StanaGraphics
+│       ├── Layout/                StanaLayout
+│       ├── Scene/                 StanaScene
+│       └── Text/                  StanaText
 ├── Platform/
 │   ├── Contracts/                 StanaPlatform
 │   └── MacOS/                    StanaPlatformMacOS (Swift)
@@ -66,12 +67,13 @@ Within `Stana`, subdirectories organize related responsibilities:
 - `Stana/Composition`: builders, component contracts, and structural components such as `STNIf` and `STNForEach`.
 - `Stana/Runtime/Mounting`, `Editing`, and `Windows`: internal mounted-content, editor, and native-window lifetime coordination.
 - `Stana/Desktop`, `Reactivity`, `Styling`, and `Diagnostics`: public desktop integration, reactive property inputs, shared styling, and diagnostics.
+- `Stana/Engine`: portable implementation subsystems, each retaining its existing module boundary independently of the authoring facade.
 
-`Engine/Primitives/Geometry` holds geometry, affine transforms, and presentation geometry; `Appearance` holds colors and themes; `Rendering` holds GPU values, rendered images, and rendering diagnostics. Smaller subsystem targets stay flat unless a meaningful responsibility grouping is needed.
+`Stana/Engine/Primitives/Geometry` holds geometry, affine transforms, and presentation geometry; `Appearance` holds colors and themes; `Rendering` holds GPU values, rendered images, and rendering diagnostics. Smaller subsystem targets stay flat unless a meaningful responsibility grouping is needed.
 
 `Platform/Contracts` contains portable service interfaces and window configuration values. The Swift macOS backend owns native frameworks, grouped by service. Native imports and types stay in this implementation target, never in portable or public signatures. There is no hand-written cross-language ABI or adapter marshalling target. No placeholder backends are created for unsupported platforms.
 
-Tests mirror the source areas, while preserving the existing test targets through explicit paths:
+Tests remain grouped by responsibility at their existing paths, with test targets defined through explicit paths:
 
 ```text
 Tests/

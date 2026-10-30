@@ -7,13 +7,13 @@ let targets: [Target] = [
 		dependencies: ["Stana", "StanaCore", "StanaPlatformMacOS"],
 		path: "Fixtures/NativeInput"
 	),
-	.target(name: "StanaPrimitives", path: "Sources/Engine/Primitives"),
-	.target(name: "StanaCore", dependencies: ["StanaPrimitives"], path: "Sources/Engine/Core"),
-	.target(name: "StanaText", dependencies: ["StanaPrimitives"], path: "Sources/Engine/Text"),
-	.target(name: "StanaLayout", dependencies: ["StanaCore", "StanaText"], path: "Sources/Engine/Layout"),
-	.target(name: "StanaScene", dependencies: ["StanaCore"], path: "Sources/Engine/Scene"),
-	.target(name: "StanaGraphics", dependencies: ["StanaScene"], path: "Sources/Engine/Graphics"),
-	.target(name: "StanaAccessibility", dependencies: ["StanaCore"], path: "Sources/Engine/Accessibility"),
+	.target(name: "StanaPrimitives", path: "Sources/Stana/Engine/Primitives"),
+	.target(name: "StanaCore", dependencies: ["StanaPrimitives"], path: "Sources/Stana/Engine/Core"),
+	.target(name: "StanaText", dependencies: ["StanaPrimitives"], path: "Sources/Stana/Engine/Text"),
+	.target(name: "StanaLayout", dependencies: ["StanaCore", "StanaText"], path: "Sources/Stana/Engine/Layout"),
+	.target(name: "StanaScene", dependencies: ["StanaCore"], path: "Sources/Stana/Engine/Scene"),
+	.target(name: "StanaGraphics", dependencies: ["StanaScene"], path: "Sources/Stana/Engine/Graphics"),
+	.target(name: "StanaAccessibility", dependencies: ["StanaCore"], path: "Sources/Stana/Engine/Accessibility"),
 	.target(
 		name: "StanaPlatform",
 		dependencies: ["StanaGraphics", "StanaText", "StanaAccessibility"],
@@ -36,6 +36,7 @@ let targets: [Target] = [
 			"StanaPrimitives", "StanaCore", "StanaLayout", "StanaText", "StanaScene", "StanaAccessibility",
 			"StanaPlatform", "StanaPlatformMacOS",
 		],
+		exclude: ["Engine"],
 		resources: [.copy("Resources")]
 	),
 	.target(
