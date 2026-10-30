@@ -270,15 +270,24 @@ import StanaText
 
 				place(child, in: .init(x: x, y: y, width: s.width, height: s.height))
 			}
+		} else if node.kind == .zStack {
+			for child in children {
+				let s = child.measured
+				var x = inner.minX
+				if node.style.alignment == .center {
+					x += (inner.size.width - s.width) / 2
+				} else if (node.style.alignment == .trailing) != (document.direction == .rightToLeft) {
+					x += inner.size.width - s.width
+				}
+
+				let y = inner.minY + (inner.size.height - s.height) / 2
+				place(child, in: .init(x: x, y: y, width: s.width, height: s.height))
+			}
 		} else {
 			for child in children {
 				let s = child.measured
-				let x =
-					inner.minX + (node.kind == .zStack ? (inner.size.width - s.width) / 2 : 0)
-					- (node.kind == .scroll ? node.scrollOffset.x : 0)
-				let y =
-					inner.minY + (node.kind == .zStack ? (inner.size.height - s.height) / 2 : 0)
-					- (node.kind == .scroll ? node.scrollOffset.y : 0)
+				let x = inner.minX - (node.kind == .scroll ? node.scrollOffset.x : 0)
+				let y = inner.minY - (node.kind == .scroll ? node.scrollOffset.y : 0)
 				place(child, in: .init(x: x, y: y, width: s.width, height: s.height))
 			}
 		}

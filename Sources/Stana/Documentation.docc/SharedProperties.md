@@ -51,6 +51,7 @@ sizing.value.maxWidth = .infinity
 ```
 
 Copies retain fill intent. Equality and hashing distinguish an omitted maximum from an explicitly infinite maximum, even though their numeric values match, so reactive frame updates observe changes in fill intent. Replacing the value with `STNFrame()` restores the omitted-maximum behavior.
+Linear stacks accept spacing and `STNAlignment`. ZStack accepts only `STNZStack.Alignment` and defaults to centered overlays; see <doc:LayoutContainers> for placement and migration guidance.
 
 ## Generic reactive inputs
 
