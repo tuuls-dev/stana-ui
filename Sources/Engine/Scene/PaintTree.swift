@@ -3,13 +3,20 @@ import StanaPrimitives
 
 package struct PaintCPUItem: Equatable, Sendable {
 	package let id: STNNodeID
-	package let version: UUID
+	package let version: RenderVersion
 	package let bounds: STNRect
 	package let commands: [DrawCommand]
+
+	package init(id: STNNodeID, version: RenderVersion, bounds: STNRect, commands: [DrawCommand]) {
+		self.id = id
+		self.version = version
+		self.bounds = bounds
+		self.commands = commands
+	}
 }
 
 package struct PaintGPUItem: Equatable, Sendable {
-	package let version = UUID()
+	package let version = RenderVersion()
 	package let id: STNNodeID
 	package let bounds: STNRect
 	package let drawing: STNGPUDrawing
@@ -31,7 +38,7 @@ package enum PaintEntry: Equatable, Sendable {
 }
 
 package struct PaintGroup: Equatable, Sendable {
-	package private(set) var version = UUID()
+	package private(set) var version = RenderVersion()
 	package let id: STNNodeID
 	package let bounds: STNRect
 	package let transform: STNAffineTransform
@@ -40,7 +47,7 @@ package struct PaintGroup: Equatable, Sendable {
 	package let radius: Double
 	package let backdrop: STNBackdropEffect?
 	package var children: PaintSequence {
-		didSet { version = UUID() }
+		didSet { version = RenderVersion() }
 	}
 
 	package init(

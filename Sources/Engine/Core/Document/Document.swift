@@ -70,7 +70,7 @@ package struct NodeStyle: Equatable, Sendable {
 	package var children: [NodeRecord] = []
 	package let scope: LifetimeScope
 	private weak var ownerScope: LifetimeScope?
-	private var ownershipToken: UUID?
+	private var ownershipToken: ResourceToken?
 	package var style = NodeStyle()
 	package var text = ""
 	package var placeholder = ""
@@ -173,7 +173,7 @@ public struct STNNodeSnapshot: Sendable, Equatable {
 }
 
 @MainActor package final class Document {
-	package let id = UUID()
+	package let id = DocumentID()
 	package private(set) var nodes: [STNNodeID: NodeRecord] = [:]
 	package private(set) var serial: UInt64 = 0
 	package private(set) var revision: UInt64 = 0
@@ -217,7 +217,7 @@ public struct STNNodeSnapshot: Sendable, Equatable {
 
 	package func create(_ kind: NodeKind, parent: NodeRecord?, scope: LifetimeScope = LifetimeScope()) -> NodeRecord {
 		ReactiveRuntime.shared.assertCanMutate("tree mount")
-		precondition(!isClosed && nodes.count < 100_000, "Stana: document node budget exceeded or document closed")
+		precondition(!isClosed && nodes.count < (.max - 1), "Stana: document node budget exceeded or document closed")
 		nextRevision(&serial)
 		let node = NodeRecord(id: .init(document: id, serial: serial), kind: kind, scope: scope)
 		node.document = self

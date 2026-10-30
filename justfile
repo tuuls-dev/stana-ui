@@ -5,15 +5,13 @@ set positional-arguments
 default:
     @just --list
 
-# Format repository Swift and Objective-C sources.
+# Format repository Swift sources.
 format:
     Scripts/format-swift.sh
-    Scripts/format-objc.sh
 
-# Check Swift and Objective-C formatting without changing files.
+# Check Swift formatting without changing files.
 check-format:
     Scripts/format-swift.sh lint
-    Scripts/format-objc.sh lint
 
 # Build the library in debug mode.
 build:
@@ -23,17 +21,14 @@ build:
 build-release:
     swift build -c release -Xswiftc -warnings-as-errors
 
-# Run tests with Swift and native warnings as errors.
+# Run tests with Swift warnings as errors.
 test:
-    swift test -Xswiftc -warnings-as-errors -Xcc -Werror
+    swift test -Xswiftc -warnings-as-errors
 
 # Run native GUI tests (requires a logged-in macOS window server).
 test-gui:
-    STANA_GUI_TESTS=1 swift test -Xswiftc -warnings-as-errors -Xcc -Werror
-
-# Check dependency and native-platform boundaries.
-check-boundaries:
-    Scripts/check-boundaries.sh
+    swift build --product NativeInputProbe -Xswiftc -warnings-as-errors
+    STANA_GUI_TESTS=1 swift test -Xswiftc -warnings-as-errors
 
 # Check valid and invalid public API fixtures.
 check-api:
@@ -57,15 +52,15 @@ example:
 
 # Run the headless benchmark in release mode and print its JSON report.
 benchmark:
-    swift run --package-path Benchmarks -c release
+    swift run --package-path Benchmarks -c release StanaBenchmarks
 
-# Report that the native hybrid workload example was removed.
-benchmark-native:
-    @sh Scripts/benchmark-native.sh
+# Run the packaged native rendering benchmark (keep its window visible).
+benchmark-native mode="persistent" output="/tmp/stana-native-benchmark.json":
+    @sh Scripts/benchmark-native.sh "$1" "$2"
 
 # Create an unsigned macOS app in dist/ from a consumer package.
 package package-path product bundle-id:
     Scripts/package-macos-app.sh "$1" "$2" "$3"
 
 # Run all non-GUI verification sequentially, stopping on the first failure.
-check: check-format check-boundaries test check-api check-runtime build-examples build-release
+check: check-format test check-api check-runtime build-examples build-release

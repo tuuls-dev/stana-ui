@@ -3,7 +3,7 @@ import StanaCore
 import StanaPrimitives
 
 public struct STNRequestToken: Sendable {
-	package let scopeID: UUID
+	package let scopeID: ScopeID
 	package let revision: UInt64
 }
 
@@ -82,5 +82,5 @@ public struct STNRequestToken: Sendable {
 }
 
 @MainActor private final class ScopeTaskRegistration {
-	var token: UUID?
+	var token: ResourceToken?
 }

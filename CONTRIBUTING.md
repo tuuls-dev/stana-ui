@@ -2,8 +2,8 @@
 
 Use Swift 6.4 in Swift 6 mode. Begin API changes with an example in a separate consumer package or `Fixtures/API/Valid`; add a negative fixture when misuse should not compile.
 
-Optionally install `just` and `clang-format` with `brew install just clang-format`, then run `just` to list the
-developer commands. `just check` runs formatting and boundary checks, strict tests, API
+Optionally install `just` with `brew install just`, then run `just` to list the
+developer commands. `just check` runs formatting checks, strict tests, API
 fixtures, runtime-fault probes, the Calculator example build, and release build in
 sequence. The underlying Swift commands and scripts remain supported.
 
@@ -38,25 +38,12 @@ inside opening/closing braces. These are writing conventions, not fully automate
 checks: the bundled formatter preserves existing gaps and expanded bodies, but
 cannot require their presence.
 
-## Objective-C formatting
-
-`just format` and `just check-format` also format the Objective-C bridge with
-`clang-format` and `.clang-format`. `clang-format` must be on `PATH`; install it
-with `brew install clang-format`. Without `just`, run `Scripts/format-objc.sh` or
-`Scripts/format-objc.sh lint`. They cover repository `.h`, `.m`, and `.mm` files,
-including new unignored files, and exclude ignored build output. CI installs
-`just` and `clang-format`, then runs `just check-format`.
-
-Use tabs (one per indentation level, displayed as four columns), a 120-column
-limit, and at most one consecutive blank line. `.editorconfig` supplies matching
-indentation settings for these files.
-
 ## Contribution checklist
 
 1. Read [architecture](Docs/Architecture.md) and [developer experience](Docs/Design/DeveloperExperience.md).
 2. Keep shared names/defaults consistent. No public placeholders, modifier chains, implicit observation, or native types in public signatures.
 3. Run `just check` (or run the corresponding Swift commands and `Scripts/check-*.sh` scripts directly).
-4. The Calculator example is built by `just build-examples` and `just check`; run affected native/VoiceOver/IME checks and record actual results. Use `just test-gui` in a logged-in macOS session with window-server access for native GUI tests; these are not enabled by `just check`. The HybridRendering workload behind `just benchmark-native` was removed. Recorded reports remain in `Benchmarks/Results`. Run Metal validation separately from performance measurements.
+4. The Calculator example is built by `just build-examples` and `just check`; run affected native/VoiceOver/IME checks and record actual results. Use `just test-gui` in a logged-in macOS session with window-server access for native GUI tests; these are not enabled by `just check`. `just benchmark-native persistent <report.json>` runs the restored mixed CPU/GPU native workload as a foreground app (120 warm-up, 1,000 measured completions). Keep its window visible; do not overlap benchmarks with tests/builds. Maintained reports and limitations live in `Benchmarks/Results` and `Docs/Verification/Metal.md`. Run Metal validation separately from performance measurements.
 5. Update DocC, examples, and platform limitations with the change.
 
 Runtime faults (cycles, forbidden mutation, exhausted budgets) fail deterministically with a diagnostic. Application failures belong in application state. Validate fallible structural plans before mutating the tree.

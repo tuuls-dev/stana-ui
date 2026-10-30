@@ -6,14 +6,14 @@ Reuse configuration without changing Stana’s mount-once composition model.
 
 Ordinary visual components accept `layout`, `appearance`, `interaction`, `accessibility`, and `lifecycle`. Text, buttons, toggles, and text fields also accept `textStyle`. Structural components such as `STNIf`, `STNForEach`, and `STNSpacer`, and specialized window-region wrappers retain their specialized APIs.
 
-| Group | Configuration |
-| --- | --- |
-| `STNLayoutProperties` | Reactive padding and frame |
-| `STNTextProperties` | Reactive font and foreground |
-| `STNAppearanceProperties` | Reactive background, opacity, border color/width, corner radius; static clipping and visibility |
-| `STNInteractionProperties` | Reactive enabled state; static inert state and pointer callbacks |
-| `STNAccessibilityProperties` | Reactive label; static hint, heading, and grouping |
-| `STNLifecycleProperties` | Mount callback, after publication |
+| Group                        | Configuration                                                                                   |
+| ---------------------------- | ----------------------------------------------------------------------------------------------- |
+| `STNLayoutProperties`        | Reactive padding and frame                                                                      |
+| `STNTextProperties`          | Reactive font and foreground                                                                    |
+| `STNAppearanceProperties`    | Reactive background, opacity, border color/width, corner radius; static clipping and visibility |
+| `STNInteractionProperties`   | Reactive enabled state; static inert state and pointer callbacks                                |
+| `STNAccessibilityProperties` | Reactive label; static hint, heading, and grouping                                              |
+| `STNLifecycleProperties`     | Mount callback, after publication                                                               |
 
 Group fields are overrides, not replacement defaults. An omitted field—including a field omitted inside an explicitly supplied empty group—retains the receiving component’s default. For example, supplying only a button’s frame preserves its padding, and supplying only a text field’s background preserves its border.
 
@@ -47,13 +47,13 @@ Wrap a custom constant in `STNProperty(value)`, or implement the protocol by ret
 
 This change replaces flat styling parameters and their overload matrices; there are no compatibility initializers.
 
-| Previous parameter | New location |
-| --- | --- |
-| `padding`, `frame` | `layout: .init(...)` |
-| `font`, `foreground` | `textStyle: .init(...)` |
-| `background`, `opacity`, border fields, `cornerRadius`, `clip`, `visibility` | `appearance: .init(...)` |
-| `isEnabled`, `inert`, pointer callbacks | `interaction: .init(...)` |
-| `onMount` | `lifecycle: .init(onMount: ...)` |
+| Previous parameter                                                           | New location                     |
+| ---------------------------------------------------------------------------- | -------------------------------- |
+| `padding`, `frame`                                                           | `layout: .init(...)`             |
+| `font`, `foreground`                                                         | `textStyle: .init(...)`          |
+| `background`, `opacity`, border fields, `cornerRadius`, `clip`, `visibility` | `appearance: .init(...)`         |
+| `isEnabled`, `inert`, pointer callbacks                                      | `interaction: .init(...)`        |
+| `onMount`                                                                    | `lifecycle: .init(onMount: ...)` |
 
 Generic source parameters need explicit types for domain-specific shorthand: use `STNColor.surface`, `STNFont.system(...)`, `STNFrame(...)`, and `STNInsets(12)` instead of `.surface`, `.system(...)`, `.init(...)`, or a bare padding literal. Ordinary string, Boolean, and Double literals still work. Groups themselves have concrete contextual types, so `layout: .init(...)` remains supported. Omit optional group fields rather than passing an untyped `nil`.
 

@@ -1,4 +1,3 @@
-import CStanaMacOS
 import Foundation
 import Stana
 import StanaPrimitives
@@ -26,14 +25,14 @@ extension NativeWindowServer {
 			let selection = try field.selection()
 			let identity = field.id.nativeID
 			"world"
-				.withNativeUTF8 {
-					#expect(stn_window_test_checked_replace(native.handle, $0, 0, 5, identity, selection.head.revision))
+				.withNativeString {
+					#expect(nativeCheckedReplace(native, $0, 0, 5, identity, selection.head.revision))
 					#expect(
-						!stn_window_test_checked_replace(native.handle, $0, 0, 5, identity, selection.head.revision)
+						!nativeCheckedReplace(native, $0, 0, 5, identity, selection.head.revision)
 					)
 				}
 			#expect(value.value == "world")
-			"undo:".withNativeUTF8 { #expect(stn_window_test_text_action(native.handle, $0, true)) }
+			"undo:".withNativeString { #expect(nativeTextAction(native, $0, true)) }
 			#expect(value.value == "hello")
 		}
 
@@ -59,14 +58,14 @@ extension NativeWindowServer {
 			let field = try #require(plain)
 			try field.requestFocus()
 			try field.selectAll()
-			"copy:".withNativeUTF8 { #expect(stn_window_test_text_action(native.handle, $0, false)) }
-			"cut:".withNativeUTF8 { #expect(stn_window_test_text_action(native.handle, $0, false)) }
+			"copy:".withNativeString { #expect(nativeTextAction(native, $0, false)) }
+			"cut:".withNativeString { #expect(nativeTextAction(native, $0, false)) }
 			options.value.isReadOnly = true
-			"copy:".withNativeUTF8 { #expect(stn_window_test_text_action(native.handle, $0, false)) }
-			"cut:".withNativeUTF8 { #expect(!stn_window_test_text_action(native.handle, $0, false)) }
+			"copy:".withNativeString { #expect(nativeTextAction(native, $0, false)) }
+			"cut:".withNativeString { #expect(!nativeTextAction(native, $0, false)) }
 			try #require(secure).requestFocus()
 			try #require(secure).selectAll()
-			"copy:".withNativeUTF8 { #expect(!stn_window_test_text_action(native.handle, $0, false)) }
+			"copy:".withNativeString { #expect(!nativeTextAction(native, $0, false)) }
 			#expect(try #require(secure).resolution().features.allSatisfy { $0.availability == .inapplicable })
 		}
 
@@ -98,7 +97,7 @@ extension NativeWindowServer {
 			let native = try #require(session.window as? MacOSWindow)
 			session.draw()
 			try await waitForNativeBacking(native)
-			#expect(stn_window_export_png(native.handle, "/tmp/stana-text-fields-verification.png"))
+			#expect(try await exportNativePNG(native, "/tmp/stana-text-fields-verification.png"))
 			#expect(session.errors.isEmpty)
 		}
 	}

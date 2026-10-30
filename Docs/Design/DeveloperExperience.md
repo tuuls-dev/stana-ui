@@ -8,14 +8,14 @@ The product must make a retained mental model understandable without disguising 
 
 ## Developer journeys and hypotheses
 
-| Journey              | Hypothesis                                                                        | Evidence required                                            |
-| -------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| First application    | One import and a copyable complete entry point avoid host setup friction          | Build/run Calculator as an external package                  |
-| Bind state           | Generic constant/signal/computed inputs and explicit `.binding` reveal intent          | Positive inference fixtures; explain captured `.value`       |
-| Reuse a component    | Ordinary Swift properties and scoped context are sufficient                       | Compile a reusable labelled field without engine imports     |
-| Edit a collection    | Observable row identity prevents accidental editor resets                         | Reorder during composition; inspect same editor/undo state   |
+| Journey              | Hypothesis                                                                        | Evidence required                                                   |
+| -------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| First application    | One import and a copyable complete entry point avoid host setup friction          | Build/run Calculator as an external package                         |
+| Bind state           | Generic constant/signal/computed inputs and explicit `.binding` reveal intent     | Positive inference fixtures; explain captured `.value`              |
+| Reuse a component    | Ordinary Swift properties and scoped context are sufficient                       | Compile a reusable labelled field without engine imports            |
+| Edit a collection    | Observable row identity prevents accidental editor resets                         | Reorder during composition; inspect same editor/undo state          |
 | Add desktop behavior | Portable commands and dialogs remove routine native escape hatches                | Calculator saves history through a system dialog using only `Stana` |
-| Debug a mistake      | Inspectable IDs, metrics, semantic state, and typed errors make ownership visible | Walk through all four tasks below                            |
+| Debug a mistake      | Inspectable IDs, metrics, semantic state, and typed errors make ownership visible | Walk through all four tasks below                                   |
 
 ## Design decisions
 

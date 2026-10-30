@@ -38,7 +38,7 @@ struct CounterApp {
 - **Hybrid rendering:** retained affine layers, Metal shapes and application shaders, HDR scene capture, and ordered frosted/glass-like backdrop effects.
 - **Headless testing:** the `StanaTesting` product provides deterministic consumer test hosts without starting a native application.
 
-The macOS backend rasterizes Core Graphics/Core Text tiles on workers and composites them with Metal, using a private Objective-C bridge to AppKit. Consumer code imports `Stana`, not AppKit or SwiftUI.
+The macOS backend rasterizes Core Graphics/Core Text tiles on workers and composites them with Metal, with a Swift AppKit host and typed owning scene submission. Consumer code imports `Stana`, not AppKit or SwiftUI.
 
 ## Try it
 
@@ -90,9 +90,9 @@ To work against a local checkout instead, replace the URL dependency with `.pack
 
 [Calculator](Examples/Calculator) is an independent consumer package using the public API. Run it with `swift run --package-path Examples/Calculator` or `just example`.
 
-| Example                             | Demonstrates                                                                                                      |
-| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| [Calculator](Examples/Calculator)   | Scientific expressions, acrylic keys, an animated graph, menus, a toolbar, a sheet, dialogs, and window capture. |
+| Example                           | Demonstrates                                                                                                     |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| [Calculator](Examples/Calculator) | Scientific expressions, acrylic keys, an animated graph, menus, a toolbar, a sheet, dialogs, and window capture. |
 
 ### Text-field rendering
 
@@ -132,15 +132,16 @@ See [shared configuration and migration](Sources/Stana/Documentation.docc/Shared
 
 Run these commands from the repository root:
 
-| Command                             | Purpose                                                                                                                     |
-| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `just`                              | List available recipes.                                                                                                     |
-| `just build`                        | Build the library in debug mode.                                                                                            |
-| `just test`                         | Run tests with Swift and native warnings treated as errors.                                                                 |
-| `just check`                        | Run formatting, boundary checks, tests, API fixtures, runtime probes, all example builds, and a release build sequentially. |
-| `just format` / `just check-format` | Format Swift and Objective-C files, or check without edits. Requires `clang-format` (`brew install just clang-format`).     |
-| `just test-gui`                     | Run opt-in native GUI tests in a logged-in macOS session.                                                                   |
-| `just benchmark`                    | Run the release-mode headless benchmark and print JSON.                                                                     |
+| Command                                          | Purpose                                                                                                                     |
+| ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| `just`                                           | List available recipes.                                                                                                     |
+| `just build`                                     | Build the library in debug mode.                                                                                            |
+| `just test`                                      | Run tests with Swift and native warnings treated as errors.                                                                 |
+| `just check`                                     | Run formatting, boundary checks, tests, API fixtures, runtime probes, all example builds, and a release build sequentially. |
+| `just format` / `just check-format`              | Format Swift files with the built-in formatter, or check without edits.                                                     |
+| `just test-gui`                                  | Run opt-in native GUI tests in a logged-in macOS session.                                                                   |
+| `just benchmark`                                 | Run the release-mode headless benchmark and print JSON.                                                                     |
+| `just benchmark-native persistent <report.json>` | Run the packaged native workload; keep it visible and separate timing from validation.                                      |
 
 Without Just, use `swift build`, `swift test -Xswiftc -warnings-as-errors -Xcc -Werror`, and the scripts described in [CONTRIBUTING.md](CONTRIBUTING.md).
 
