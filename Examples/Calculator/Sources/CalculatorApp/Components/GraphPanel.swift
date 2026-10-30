@@ -84,6 +84,7 @@ import Stana
 			)
 			STNZStack(
 				properties: .init(
+					alignment: .center,
 					layout: .init(frame: size.map { STNFrame(width: $0.width, height: $0.height) }),
 					appearance: .init(cornerRadius: 8, clip: true)
 				)

@@ -11,6 +11,7 @@ A component describes one mount. Signals update the properties of retained nodes
 ### Shared Configuration
 
 - <doc:SharedProperties>
+- <doc:LayoutContainers>
 - `STNPropertyConvertible`
 - `STNProperty`
 - `STNLayoutProperties`
