@@ -1,4 +1,3 @@
-import CStanaMacOS
 import Foundation
 import StanaCore
 import StanaPrimitives
@@ -52,22 +51,18 @@ extension NativeWindowServer {
 				window.graphics.presentation.confirmed?.scene == scene.sceneRevision
 					|| window.graphics.presentation.ambiguous?.scene == scene.sceneRevision
 			}
-			#expect(stn_window_export_png(window.handle, "/tmp/stana-metal-hybrid.png"))
-			#expect(stn_window_pixel_hash(window.handle) != 0)
-			let json = try #require(stn_metal_copy_diagnostics(window.handle))
-			defer { stn_string_free(json) }
-			let counters = try #require(
-				JSONSerialization.jsonObject(with: Data(String(cString: json).utf8)) as? [String: Any]
-			)
+			#expect(try await exportNativePNG(window, "/tmp/stana-metal-hybrid.png"))
+			#expect(try await nativePixelHash(window) != 0)
+			let counters = try await window.renderingDiagnostics().counters
 			if window.graphics.presentation.confirmed == nil {
-				#expect((counters["zeroPresentationObservations"] as? Int ?? 0) > 0)
+				#expect((counters["zeroPresentationObservations"] as Double? ?? 0) > 0)
 				#expect(window.graphics.presentation.ambiguous?.scene == scene.sceneRevision)
 			}
 			if ProcessInfo.processInfo.environment["STANA_REQUIRE_PRESENTED"] == "1" {
 				#expect(window.graphics.presentation.confirmed?.scene == scene.sceneRevision)
 			}
-			#expect((counters["rasterPixels"] as? Int ?? 0) > 0)
-			#expect((counters["gpuLeafDraws"] as? Int ?? 0) == 1)
+			#expect((counters["rasterPixels"] as Double? ?? 0) > 0)
+			#expect((counters["gpuLeafDraws"] as Double? ?? 0) == 1)
 		}
 
 		@Test func applicationComputeAndHDRReadbackPreserveExtendedValues() async throws {
@@ -112,7 +107,7 @@ extension NativeWindowServer {
 				window.graphics.presentation.confirmed?.scene == scene.sceneRevision
 					|| window.graphics.presentation.ambiguous?.scene == scene.sceneRevision
 			}
-			#expect(stn_metal_export(window.handle, "/tmp/stana-metal-hdr.rgba16f", true))
+			#expect(try await exportNativeScene(window, "/tmp/stana-metal-hdr.rgba16f", true))
 			let data = try Data(contentsOf: URL(fileURLWithPath: "/tmp/stana-metal-hdr.rgba16f"))
 			let values = data.withUnsafeBytes { Array($0.bindMemory(to: Float16.self)) }
 			let metadata =
@@ -158,7 +153,7 @@ extension NativeWindowServer {
 			let window = try MacOSWindow(title: "Temporal state", size: .init(width: 32, height: 32))
 			window.graphics.onFailure = { Issue.record("Metal failure: \($0)") }
 			var diagnostics: [STNGPUDiagnostic] = []
-			window.graphics.onDiagnostic = { diagnostics.append($0) }
+			window.graphics.onDiagnostic = { _, diagnostic in diagnostics.append(diagnostic) }
 			defer { window.close() }
 			let document = Document(size: .init(width: 32, height: 32))
 			defer { document.close() }
@@ -166,7 +161,7 @@ extension NativeWindowServer {
 			let gpu = document.create(.gpuCanvas, parent: document.root)
 			gpu.bounds = document.root.bounds
 			let builder = SceneBuilder(document: document)
-			let transport = MetalSceneEncoder()
+
 			window.show()
 			try await Task.sleep(for: .milliseconds(50))
 			for _ in 0..<1_000 {
@@ -180,12 +175,7 @@ extension NativeWindowServer {
 				// This verifies offscreen feedback, not display geometry. The XCTest
 				// host can return only zero presentation timestamps, so bypass the
 				// adapter's deliberately bounded unacknowledged-geometry admission.
-				let packet = try transport.encode(scene)
-				#expect(
-					packet.withUnsafeBytes {
-						stn_metal_submit(window.handle, $0.bindMemory(to: UInt8.self).baseAddress, $0.count)
-					}
-				)
+				try await window.graphics.prepareOffscreenForTesting(scene)
 				try await wait { window.renderer.backingRevision >= scene.sceneRevision }
 			}
 			let image = try await window.capture()
@@ -242,7 +232,7 @@ extension NativeWindowServer {
 				color: STNColor(red: 1, green: 0.5, blue: 0, alpha: 0.5)
 			)
 			let builder = SceneBuilder(document: document)
-			stn_metal_test_configuration(window.handle, 1, 0, false)
+			configureNativeRendering(window, 1, 0, false)
 			let baseline = try await capture(
 				builder.build(surfaceEpoch: window.renderer.surfaceEpoch, backingRevision: 0),
 				in: window
@@ -276,7 +266,7 @@ extension NativeWindowServer {
 			let radius = Int((3 * Double(baseline.width) / 48).rounded(.up))
 			let reference = boxBlur(baseline.data, width: baseline.width, height: baseline.height, radius: radius)
 			#expect(zip(blurred.data, reference).allSatisfy { abs(Int($0) - Int($1)) <= 2 })
-			stn_metal_test_configuration(window.handle, 2, 0, false)
+			configureNativeRendering(window, 2, 0, false)
 			document.changed(document.root, .paint)
 			let direct = try await capture(
 				builder.build(
@@ -359,7 +349,7 @@ extension NativeWindowServer {
 			window.show()
 			try await Task.sleep(for: .milliseconds(50))
 			let builder = SceneBuilder(document: document)
-			stn_metal_test_configuration(window.handle, 1, 0, false)
+			configureNativeRendering(window, 1, 0, false)
 			let image = try await capture(
 				builder.build(surfaceEpoch: window.renderer.surfaceEpoch, backingRevision: 0),
 				in: window
@@ -376,7 +366,7 @@ extension NativeWindowServer {
 			#expect(zip(pixel(12, 16), expected).allSatisfy { abs($0 - $1) <= 2.0 / 255 })
 			#expect(zip(pixel(3, 16), prefix).allSatisfy { abs($0 - $1) <= 2.0 / 255 })
 			#expect(pixel(24, 16) == [1, 1, 0, 1])
-			stn_metal_test_configuration(window.handle, 2, 0, false)
+			configureNativeRendering(window, 2, 0, false)
 			document.changed(document.root, .paint)
 			let direct = try await capture(
 				builder.build(
@@ -465,7 +455,7 @@ extension NativeWindowServer {
 			defer { window.close() }
 			window.show()
 			try await Task.sleep(for: .milliseconds(50))
-			stn_metal_test_configuration(window.handle, 1, 0.1, true)
+			configureNativeRendering(window, 1, 0.1, true)
 			let document = Document(size: .init(width: 100, height: 80))
 			defer { document.close() }
 			document.root.bounds = .init(width: 100, height: 80)
@@ -475,32 +465,16 @@ extension NativeWindowServer {
 			try await Task.sleep(for: .milliseconds(30))
 			var dispatchedKeys = 0
 			window.onEvent = { event in if case .key = event { dispatchedKeys += 1 } }
-			window.receive(
-				stn_event(
-					kind: 6,
-					x: 0,
-					y: 0,
-					a: 0,
-					b: 0,
-					identity: 0,
-					sequence: 0,
-					epoch: 0,
-					text: stn_utf8(bytes: nil, length: 0)
-				)
-			)
+			window.emit(.key("", false, false))
 			#expect(dispatchedKeys == 1)
 			#expect(window.renderer.backingRevision == 0)
 			try await wait { window.renderer.backingRevision == scene.sceneRevision }
 			for _ in 0..<100 { document.changed(document.root, .paint); window.requestRedraw() }
 			try await Task.sleep(for: .milliseconds(100))
-			let json = try #require(stn_metal_copy_diagnostics(window.handle))
-			defer { stn_string_free(json) }
-			let counters = try #require(
-				JSONSerialization.jsonObject(with: Data(String(cString: json).utf8)) as? [String: Any]
-			)
-			#expect((counters["drawableAcquisitions"] as? Int ?? 0) == 0)
-			#expect((counters["offscreenSubmissions"] as? Int ?? 0) == 1)
-			stn_metal_test_configuration(window.handle, 1, 0, false)
+			let counters = try await window.renderingDiagnostics().counters
+			#expect((counters["drawableAcquisitions"] as Double? ?? 0) == 0)
+			#expect((counters["offscreenSubmissions"] as Double? ?? 0) == 1)
+			configureNativeRendering(window, 1, 0, false)
 		}
 
 		@Test func sparseFinalTilesMatchForcedFullAndUntiledReconstructions() async throws {
@@ -516,7 +490,7 @@ extension NativeWindowServer {
 			leaf.bounds = .init(x: 20, y: 20, width: 30, height: 30)
 			leaf.canvasCommands = [.fill(.init(width: 30, height: 30), .white, 0)]
 			let builder = SceneBuilder(document: document)
-			stn_metal_test_configuration(window.handle, 1, 0, false)
+			configureNativeRendering(window, 1, 0, false)
 			_ = try await capture(
 				builder.build(surfaceEpoch: window.renderer.surfaceEpoch, backingRevision: 0),
 				in: window
@@ -540,7 +514,7 @@ extension NativeWindowServer {
 				after.counters["finalPixelsRedrawn", default: 0] - before.counters["finalPixelsRedrawn", default: 0]
 					<= pixels * 0.1
 			)
-			stn_metal_test_configuration(window.handle, 3, 0, false)
+			configureNativeRendering(window, 3, 0, false)
 			document.changed(document.root, .paint)
 			let full = try await capture(
 				builder.build(
@@ -550,7 +524,7 @@ extension NativeWindowServer {
 				in: window
 			)
 			#expect(incremental.data == full.data)
-			stn_metal_test_configuration(window.handle, 4, 0, false)
+			configureNativeRendering(window, 4, 0, false)
 			document.changed(document.root, .paint)
 			let untiled = try await capture(
 				builder.build(

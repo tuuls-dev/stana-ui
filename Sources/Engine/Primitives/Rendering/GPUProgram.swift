@@ -17,6 +17,13 @@ public struct STNGPUDiagnostic: Equatable, Sendable, Codable {
 	public let programVersion: String
 	public let message: String
 	public let instance: String
+
+	package init(category: Category, programVersion: String, message: String, instance: String) {
+		self.category = category
+		self.programVersion = programVersion
+		self.message = message
+		self.instance = instance
+	}
 }
 
 public enum STNGPUColorEncoding: String, Sendable, Codable {
@@ -42,7 +49,7 @@ public enum STNGPUShader: Equatable, Sendable {
 }
 
 public struct STNGPUBuffer: Equatable, Sendable {
-	package let version = UUID()
+	package let version = RenderVersion()
 	public let data: Data
 
 	public init(data: Data) {
@@ -55,7 +62,7 @@ public struct STNGPUBuffer: Equatable, Sendable {
 }
 
 public struct STNGPUTexture: Equatable, Sendable {
-	package let version = UUID()
+	package let version = RenderVersion()
 	public let width: Int
 	public let height: Int
 	public let format: STNGPUTextureFormat
@@ -247,9 +254,9 @@ public enum STNGPUFunctionConstant: Equatable, Sendable {
 
 /// Trusted application shaders, with explicit immutable inputs and pass dependencies.
 public struct STNGPUProgram: Equatable, Sendable {
-	package let version = UUID()
-	package private(set) var pipelineVersion = UUID()
-	package private(set) var stateVersion = UUID()
+	package let version = RenderVersion()
+	package private(set) var pipelineVersion = RenderVersion()
+	package private(set) var stateVersion = RenderVersion()
 	public let shader: STNGPUShader
 	public let resources: [String: STNGPUResource]
 	public let passes: [STNGPUPass]

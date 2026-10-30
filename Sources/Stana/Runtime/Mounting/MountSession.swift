@@ -115,10 +115,8 @@ import StanaText
 				self.window?.accessibility.publish(self.semantics.snapshot())
 			}
 			native.graphics.onFailure = { [weak self] message in self?.report(.nativeFailure(message)) }
-			native.graphics.onDiagnostic = { [weak self] diagnostic in
-				if let serial = UInt64(diagnostic.instance.split(separator: ":").last ?? "") {
-					self?.document.lookup(serial)?.onGPUError?(diagnostic)
-				}
+			native.graphics.onDiagnostic = { [weak self] node, diagnostic in
+				(try? self?.document.resolve(node))?.onGPUError?(diagnostic)
 			}
 		}
 		(window as? MacOSWindow)?.onFrame = { [weak self] timestamp, target in

@@ -1,4 +1,5 @@
 import Foundation
+import StanaPrimitives
 
 @MainActor package class GraphNode {
 	enum Phase {
@@ -213,7 +214,7 @@ import Foundation
 	var flushing = false
 	var pending: [ObjectIdentifier: Observation] = [:]
 	var ordered: [ObjectIdentifier] = []
-	var commits: [UUID: () -> Void] = [:]
+	var commits: [DocumentID: () -> Void] = [:]
 	var effects: [() -> Void] = []
 	var computedEvaluations = 0
 	var observationSequence: UInt64 = 0
@@ -252,7 +253,7 @@ import Foundation
 		}
 	}
 
-	package func scheduleCommit(id: UUID, _ body: @escaping () -> Void) {
+	package func scheduleCommit(id: DocumentID, _ body: @escaping () -> Void) {
 		commits[id] = body
 		if depth == 0 && !flushing {
 			flush()

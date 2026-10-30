@@ -1,4 +1,3 @@
-import CStanaMacOS
 import Foundation
 import Stana
 import StanaPlatform
@@ -16,20 +15,20 @@ extension NativeWindowServer {
 				standard.close()
 			}
 
-			#expect(stn_window_test_style(standard.handle) & 15 == 15)
+			#expect(nativeStyle(standard) & 15 == 15)
 			let options = STNWindowOptions(appearance: .init(frame: .frameless), resizing: .init(isResizable: false))
 			let frameless = try MacOSWindow(title: "Frameless", size: .init(width: 360, height: 240), options: options)
 			defer {
 				frameless.close()
 			}
 
-			#expect(stn_window_test_style(frameless.handle) & 1 == 0)
-			#expect(stn_window_test_style(frameless.handle) & 8 == 0)
-			#expect(stn_window_test_property(frameless.handle, 2) == 1)
-			#expect(stn_window_test_property(frameless.handle, 3) == 1)
+			#expect(nativeStyle(frameless) & 1 == 0)
+			#expect(nativeStyle(frameless) & 8 == 0)
+			#expect(nativeProperty(frameless, 2) == 1)
+			#expect(nativeProperty(frameless, 3) == 1)
 			try frameless.perform(.show)
 			frameless.editing(true)
-			"c".withNativeUTF8 { #expect(stn_window_test_key_equivalent(frameless.handle, $0)) }
+			"c".withNativeString { #expect(nativeKeyEquivalent(frameless, $0)) }
 		}
 
 		@Test func panelRoleIsNativeAndUnavailablePanelOptionsAreResolved() throws {
@@ -43,9 +42,9 @@ extension NativeWindowServer {
 				panel.close()
 			}
 
-			#expect(stn_window_test_property(panel.handle, 4) == 1)
-			#expect(stn_window_test_property(panel.handle, 3) == 0)
-			#expect(stn_window_test_style(panel.handle) & (1 << 7) != 0)
+			#expect(nativeProperty(panel, 4) == 1)
+			#expect(nativeProperty(panel, 3) == 0)
+			#expect(nativeStyle(panel) & (1 << 7) != 0)
 			let resolved = try MacOSHost().resolve(.init(behavior: .init(worksWhenModal: .enabled)), initial: nil)
 			#expect(resolved.options.behavior.worksWhenModal == .automatic)
 			#expect(resolved.resolution.ignored == [.init("behavior.worksWhenModal", reason: .inapplicable)])
@@ -66,21 +65,21 @@ extension NativeWindowServer {
 
 			let session = try #require(window.session)
 			let native = try #require(session.window as? MacOSWindow)
-			let handle = native.handle
+			let handle = native.nativeWindow
 			let ids = session.nodeSnapshots.map(\.id)
 			let editor = try #require(session.nodeSnapshots.first { $0.kind == "textField" })
 			session.document.setFocus(editor.id)
 			config.value.appearance.frame = .frameless
-			#expect(native.handle == handle)
+			#expect(native.nativeWindow === handle)
 			#expect(session.nodeSnapshots.map(\.id) == ids)
 			#expect(session.document.focused == editor.id)
-			#expect(stn_window_test_style(native.handle) & 1 == 0)
+			#expect(nativeStyle(native) & 1 == 0)
 			config.value.appearance.frame = .system
 			config.value.titleBar.fullSizeContent = .enabled
 			config.value.titleBar.transparent = .enabled
 			config.value.titleBar.closeButton.visibility = .disabled
-			#expect(stn_window_test_style(native.handle) & (1 << 15) != 0)
-			#expect(stn_window_test_property(native.handle, 9) == 1)
+			#expect(nativeStyle(native) & (1 << 15) != 0)
+			#expect(nativeProperty(native, 9) == 1)
 			#expect(window.state.value.safeContentBounds.minY > 0)
 			#expect(session.errors.isEmpty)
 		}
@@ -101,17 +100,17 @@ extension NativeWindowServer {
 				window.close()
 			}
 
-			#expect(stn_window_test_property(window.handle, 5) == 240)
-			#expect(stn_window_test_property(window.handle, 6) == 160)
-			#expect(stn_window_test_property(window.handle, 7) == 0.75)
-			#expect(stn_window_test_property(window.handle, 8) == 0)
+			#expect(nativeProperty(window, 5) == 240)
+			#expect(nativeProperty(window, 6) == 160)
+			#expect(nativeProperty(window, 7) == 0.75)
+			#expect(nativeProperty(window, 8) == 0)
 			try window.setContentSize(.init(width: 100, height: 100))
 			#expect(window.state.contentSize.width >= 240)
 			#expect(window.state.contentSize.height >= 160)
 			try window.apply(.init())
-			#expect(stn_window_test_property(window.handle, 7) == 1)
-			#expect(stn_window_test_property(window.handle, 8) == 1)
-			#expect(stn_window_test_property(window.handle, 5) == 0)
+			#expect(nativeProperty(window, 7) == 1)
+			#expect(nativeProperty(window, 8) == 1)
+			#expect(nativeProperty(window, 5) == 0)
 		}
 
 		@Test func transparentRasterHasAlphaInsteadOfOpaqueRootFill() async throws {
@@ -131,9 +130,9 @@ extension NativeWindowServer {
 			let native = try #require(session.window as? MacOSWindow)
 			session.draw()
 			try await waitForNativeBacking(native)
-			#expect(stn_window_test_property(native.handle, 1) == 0)
-			#expect(stn_window_pixel_hash(native.handle) != 0)
-			#expect(stn_window_export_png(native.handle, "/tmp/stana-transparent-window.png"))
+			#expect(nativeProperty(native, 1) == 0)
+			#expect(try await nativePixelHash(native) != 0)
+			#expect(try await exportNativePNG(native, "/tmp/stana-transparent-window.png"))
 		}
 
 		@Test func nativeToolbarAndAccessorySurfacesPreserveIdentity() throws {
@@ -165,16 +164,16 @@ extension NativeWindowServer {
 			}
 
 			let native = try #require(window.session?.window as? MacOSWindow)
-			#expect(stn_window_test_property(native.handle, 14) == 3)
-			#expect(stn_window_test_property(native.handle, 15) == 1)
+			#expect(nativeProperty(native, 14) == 3)
+			#expect(nativeProperty(native, 15) == 1)
 			#expect(mounts == 2)
 			config.value.chrome.toolbarStyle = .unifiedCompact
 			title.value = "Updated"
 			#expect(mounts == 2)
 			#expect(window.session?.errors.isEmpty == true)
 			config.value.chrome = .init()
-			#expect(stn_window_test_property(native.handle, 14) == 0)
-			#expect(stn_window_test_property(native.handle, 15) == 0)
+			#expect(nativeProperty(native, 14) == 0)
+			#expect(nativeProperty(native, 15) == 0)
 		}
 
 		@Test func nativeRelationshipsAndCloseVetoAreHonored() throws {
@@ -264,7 +263,7 @@ extension NativeWindowServer {
 		}
 
 		@Test func savedGeometryAndDisplayDiscoveryUsePortableCoordinates() throws {
-			let name = "stana.test." + UUID().uuidString
+			let name = "stana.test.\(ProcessInfo.processInfo.processIdentifier).\(ResourceToken().rawValue)"
 			defer {
 				STNApplication.removeSavedWindowFrame(named: name)
 			}
@@ -406,16 +405,16 @@ extension NativeWindowServer {
 			}
 
 			let native = try #require(window.session?.window as? MacOSWindow)
-			"に".withNativeUTF8 { #expect(stn_window_test_marked_text(native.handle, $0, false)) }
+			"に".withNativeString { #expect(nativeMarkedText(native, $0, false)) }
 			config.value.titleBar.fullSizeContent = .enabled
 			#expect(window.resolution.value.isPending)
 			#expect(value.value == "A")
-			"".withNativeUTF8 { #expect(stn_window_test_marked_text(native.handle, $0, true)) }
+			"".withNativeString { #expect(nativeMarkedText(native, $0, true)) }
 			#expect(!window.resolution.value.isPending)
 			#expect(value.value.contains("に"))
 			#expect(mounts == 1)
-			"い".withNativeUTF8 { #expect(stn_window_test_marked_text(native.handle, $0, false)) }
-			"".withNativeUTF8 { #expect(stn_window_test_marked_text(native.handle, $0, true)) }
+			"い".withNativeString { #expect(nativeMarkedText(native, $0, false)) }
+			"".withNativeString { #expect(nativeMarkedText(native, $0, true)) }
 			#expect(value.value.contains("い"))
 		}
 	}

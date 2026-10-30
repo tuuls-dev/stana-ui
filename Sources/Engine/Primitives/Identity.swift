@@ -1,10 +1,10 @@
 import Foundation
 
 public struct STNNodeID: Hashable, Sendable, CustomStringConvertible {
-	package let document: UUID
+	package let document: DocumentID
 	package let serial: UInt64
 
-	package init(document: UUID, serial: UInt64) {
+	package init(document: DocumentID, serial: UInt64) {
 		self.document = document
 		self.serial = serial
 	}
@@ -46,6 +46,9 @@ public enum STNError: Error, Equatable, Sendable {
 }
 
 package func nextRevision(_ revision: inout UInt64) {
-	precondition(revision < .max, "Stana: revision namespace exhausted")
+	guard revision < .max else {
+		fatalError("Stana: revision namespace exhausted")
+	}
+
 	revision += 1
 }

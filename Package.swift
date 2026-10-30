@@ -2,6 +2,11 @@
 import PackageDescription
 
 let targets: [Target] = [
+	.executableTarget(
+		name: "NativeInputProbe",
+		dependencies: ["Stana", "StanaCore", "StanaPlatformMacOS"],
+		path: "Fixtures/NativeInput"
+	),
 	.target(name: "StanaPrimitives", path: "Sources/Engine/Primitives"),
 	.target(name: "StanaCore", dependencies: ["StanaPrimitives"], path: "Sources/Engine/Core"),
 	.target(name: "StanaText", dependencies: ["StanaPrimitives"], path: "Sources/Engine/Text"),
@@ -15,18 +20,15 @@ let targets: [Target] = [
 		path: "Sources/Platform/Contracts"
 	),
 	.target(
-		name: "CStanaMacOS",
-		path: "Sources/Platform/MacOS/Bridge",
-		publicHeadersPath: "include",
-		linkerSettings: [
-			.linkedFramework("AppKit"), .linkedFramework("CoreGraphics"), .linkedFramework("CoreText"),
-			.linkedFramework("Metal"), .linkedFramework("QuartzCore"), .linkedFramework("IOSurface"),
-		]
-	),
-	.target(
 		name: "StanaPlatformMacOS",
-		dependencies: ["StanaPlatform", "CStanaMacOS"],
-		path: "Sources/Platform/MacOS/Adapter"
+		dependencies: ["StanaPlatform"],
+		path: "Sources/Platform/MacOS",
+		resources: [.copy("Rendering/Shaders")],
+		linkerSettings: [
+			.linkedFramework("AppKit"), .linkedFramework("Metal"), .linkedFramework("QuartzCore"),
+			.linkedFramework("IOSurface"), .linkedFramework("CoreGraphics"), .linkedFramework("CoreText"),
+			.linkedFramework("ImageIO"),
+		]
 	),
 	.target(
 		name: "Stana",
@@ -57,7 +59,7 @@ let targets: [Target] = [
 		name: "StanaMacOSIntegrationTests",
 		dependencies: [
 			"Stana", "StanaPlatformMacOS", "StanaPrimitives", "StanaCore", "StanaAccessibility", "StanaScene",
-			"StanaGraphics", "CStanaMacOS",
+			"StanaGraphics",
 		],
 		path: "Tests/Platform/MacOS"
 	),
@@ -74,7 +76,8 @@ let targets: [Target] = [
 		packageAccess: false
 	),
 ]
-for target in targets where target.name != "CStanaMacOS" {
+
+for target in targets {
 	target.swiftSettings = [.defaultIsolation(nil)]
 }
 

@@ -1,4 +1,3 @@
-import CStanaMacOS
 import Foundation
 import Stana
 import StanaAccessibility
@@ -42,22 +41,22 @@ extension NativeWindowServer {
 			#expect(session.document.viewport.width > 0 && session.document.viewport.height > 0)
 			#expect(session.errors.isEmpty)
 			#expect(native.renderer.backingRevision > 0)
-			#expect(stn_window_semantic_count(native.handle) == 4)
-			#expect(stn_window_export_png(native.handle, "/tmp/stana-preferences-verification.png"))
+			#expect(nativeSemanticCount(native) == 4)
+			#expect(try await exportNativePNG(native, "/tmp/stana-preferences-verification.png"))
 			name.value = "Updated"
 			session.draw()
 			#expect(session.document.metrics.mountedNodes > 0)
 		}
 
-		@Test func retainedRasterMatchesFullRedrawAndPublishesNativeElements() throws {
+		@Test func retainedRasterMatchesFullRedrawAndPublishesNativeElements() async throws {
 			let window = try MacOSWindow(title: "Stana native verification", size: .init(width: 240, height: 160))
 			defer {
 				window.close()
 			}
 
 			window.editing(true)
-			"s".withNativeUTF8 { #expect(!stn_window_test_key_equivalent(window.handle, $0)) }
-			"c".withNativeUTF8 { #expect(stn_window_test_key_equivalent(window.handle, $0)) }
+			"s".withNativeString { #expect(!nativeKeyEquivalent(window, $0)) }
+			"c".withNativeString { #expect(nativeKeyEquivalent(window, $0)) }
 			window.editing(false)
 			let renderer = CoreGraphicsRenderer(window: window)
 			let full = STNRect(width: 240, height: 160)
@@ -86,11 +85,11 @@ extension NativeWindowServer {
 
 			_ = try renderer.submit(scene(1, x: 10, damage: [full], base: 0))
 			_ = try renderer.submit(scene(2, x: 80, damage: [.init(x: 10, y: 20, width: 110, height: 30)], base: 1))
-			let incremental = stn_window_pixel_hash(window.handle)
+			let incremental = try await nativePixelHash(window)
 			_ = try renderer.submit(scene(3, x: 80, damage: [full], base: 2))
 			#expect(incremental != 0)
-			#expect(incremental == stn_window_pixel_hash(window.handle))
-			#expect(stn_window_export_png(window.handle, "/tmp/stana-native-verification.png"))
+			#expect(try await nativePixelHash(window) == incremental)
+			#expect(try await exportNativePNG(window, "/tmp/stana-native-verification.png"))
 			let document = Document(size: full.size)
 			STNTransaction.perform {
 				let button = document.create(.button, parent: document.root)
@@ -99,8 +98,8 @@ extension NativeWindowServer {
 			}
 			let snapshot = SemanticProjection(document: document).snapshot()
 			window.accessibility.publish(snapshot)
-			#expect(stn_window_semantic_count(window.handle) == 1)
-			#expect(stn_window_semantic_revision(window.handle) == snapshot.revision)
+			#expect(nativeSemanticCount(window) == 1)
+			#expect(nativeSemanticRevision(window) == snapshot.revision)
 			document.close()
 		}
 	}

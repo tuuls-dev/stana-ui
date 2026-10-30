@@ -11,13 +11,13 @@ A component describes one mount. Signals update the properties of retained nodes
 ### Shared Configuration
 
 - <doc:SharedProperties>
-- ``STNPropertyConvertible``
-- ``STNProperty``
-- ``STNLayoutProperties``
-- ``STNTextProperties``
-- ``STNAppearanceProperties``
-- ``STNInteractionProperties``
-- ``STNLifecycleProperties``
+- `STNPropertyConvertible`
+- `STNProperty`
+- `STNLayoutProperties`
+- `STNTextProperties`
+- `STNAppearanceProperties`
+- `STNInteractionProperties`
+- `STNLifecycleProperties`
 
 ### Start
 

@@ -4,7 +4,7 @@
 
 Stana UI is a swift toolkit for creating crossplatform desktop apps. `Sources/` has four entry points: `Stana` for the authoring API and composition root, `Engine` for portable subsystems, `Platform` for service contracts and native backends, and `StanaTesting` for consumer test hosts. Resources live in `Sources/Stana/Resources`; DocC lives in `Sources/Stana/Documentation.docc`.
 
-Within `Sources/Stana`, `Application` holds public application/window API, `Components` groups controls, layout, and drawing, and `Composition` holds builders and structural components. `Runtime` separates internal mounting, editing, and window lifetimes. `Sources/Engine` contains `Primitives`, `Core`, `Accessibility`, `Graphics`, `Layout`, `Scene`, and `Text`. `Sources/Platform/Contracts` holds portable platform interfaces; `Sources/Platform/MacOS/Adapter` contains Swift adapters and `Sources/Platform/MacOS/Bridge` contains the private Objective-C bridge. Bridge C headers stay in `Bridge/include`; private headers live beside their implementations or at the bridge root. Target names and dependencies remain defined in `Package.swift` with explicit paths for nested targets; organizational folders do not create additional modules.
+Within `Sources/Stana`, `Application` holds public application/window API, `Components` groups controls, layout, and drawing, and `Composition` holds builders and structural components. `Runtime` separates internal mounting, editing, and window lifetimes. `Sources/Engine` contains `Primitives`, `Core`, `Accessibility`, `Graphics`, `Layout`, `Scene`, and `Text`. `Sources/Platform/Contracts` holds portable platform interfaces; `Sources/Platform/MacOS` contains the Swift native implementation, grouped by service, with MSL resources in `Rendering/Shaders`. Target names and dependencies remain defined in `Package.swift` with explicit paths for nested targets; organizational folders do not create additional modules.
 
 `Tests/` mirrors source areas: `Tests/Stana` holds authoring/runtime integration tests, `Tests/Engine` groups subsystem tests, and `Tests/Platform/MacOS` groups native rendering, text, and windowing tests with shared helpers in `Support`. Existing test target names and dependencies are preserved through explicit paths in `Package.swift`; do not create empty folders for subsystems without dedicated tests. `Examples/` contains independent consumer packages. `Fixtures/` holds API compilation cases and runtime-fault probes. `Scripts/` provides verification and packaging helpers; `Benchmarks/` contains performance fixtures. Consult `Docs/Architecture.md` and `CONTRIBUTING.md` before architectural changes.
 
@@ -15,23 +15,24 @@ Within `Sources/Stana`, `Application` holds public application/window API, `Comp
 Use Swift 6.4 or newer in Swift 6 mode; the deployment target is macOS 26.
 
 - `just`: list available recipes.
-- `just format` / `just check-format`: format repository Swift and Objective-C files, or check formatting without edits.
+- `just format` / `just check-format`: format repository Swift files, or check formatting without edits.
 - `just build` / `just build-release`: debug/release builds.
 - `just test`: tests with Swift and native warnings treated as errors.
-- `just check`: sequential formatting and boundary checks, tests, API fixtures, runtime probes, all example builds, and release build.
+- `just check`: sequential formatting checks, tests, API fixtures, runtime probes, all example builds, and release build.
 - `just example`: launch the Calculator example.
 - `just benchmark`: release-mode headless benchmark, emitting JSON.
+- `just benchmark-native persistent <report.json>`: packaged native workload; keep its window visible and run timing separately from validation/tests.
 - `just test-gui`: opt-in GUI tests requiring a logged-in macOS window server.
 
-Direct commands such as `swift build`, `swift test`, and `Scripts/check-boundaries.sh` remain supported.
+Direct commands such as `swift build` and `swift test` remain supported.
 
 ## Coding Style & Naming Conventions
 
-Follow `.swift-format` for Swift and `.clang-format` for Objective-C: one tab per indentation level, a four-column tab width, and 120-column lines. `just format` runs the built-in `swift format` and `clang-format` on `PATH` (`brew install clang-format`). `just check-format` and CI enforce both. CI installs `just` and `clang-format`. EditorConfig supplies matching indentation settings.
+Follow `.swift-format`: one tab per indentation level, a four-column tab width, and 120-column lines. `just format` uses the built-in `swift format`; `just check-format` and CI enforce it. CI installs `just`. EditorConfig supplies matching indentation settings.
 
 Use one blank line between methods, initializers, types, and computed properties; keep related stored properties together. Expand nonempty one-line function and control-flow bodies, and separate multiline control-flow blocks from following statements with a blank line. Do not add padding inside opening/closing braces or multiple consecutive blank lines. These breathing-room conventions must be applied when writing code: the formatter preserves existing gaps and expanded bodies but cannot require their presence. Wrapped argument lists use one argument per line, and multiline expression chains are separated onto lines.
 
-Use UpperCamelCase types, lowerCamelCase members, and the existing `STN` prefix for public toolkit types. Keep public API in `Stana` and cross-target implementation `package`-visible. Avoid circular dependencies, native types in public signatures, and AppKit/SwiftUI imports in Swift sources. Do not initialize `NSApplication` during module loading or headless tests.
+Use UpperCamelCase types, lowerCamelCase members, and the existing `STN` prefix for public toolkit types. Keep public API in `Stana` and cross-target implementation `package`-visible. Avoid circular dependencies, native types in public signatures, and native imports outside `Sources/Platform/MacOS`. SwiftUI is not a dependency. Do not initialize `NSApplication` during module loading or headless tests.
 
 ## Testing Guidelines
 

@@ -1,5 +1,6 @@
 import Foundation
 import StanaCore
+import StanaPrimitives
 import StanaPlatformMacOS
 
 public struct STNFrameTime: Sendable {
@@ -25,7 +26,7 @@ public struct STNFrameTime: Sendable {
 }
 
 @MainActor package final class FrameRegistration {
-	let id = UUID()
+	let id = FrameID()
 	weak var scope: LifetimeScope?
 	let active: () -> Bool
 	let callback: (STNFrameTime) -> Void

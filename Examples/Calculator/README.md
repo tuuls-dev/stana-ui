@@ -28,16 +28,16 @@ Invalid drafts show no scalar result. A retained previous plot is explicitly lab
 
 ### Desktop commands
 
-| Shortcut | Action |
-| --- | --- |
-| Return in expression field / ⌘Return | Record expression / function |
-| ⌘K | Clear expression |
-| ⇧⌘F | Function library |
-| ⇧⌘C | Copy numerical preview at full precision |
-| ⇧⌘V | Paste into the expression's selection |
-| ⌘G | Show / hide plot |
-| ⇧⌘H | Show / hide tape |
-| ⌘S | Export tape, including full-precision results and evaluation context |
+| Shortcut                             | Action                                                               |
+| ------------------------------------ | -------------------------------------------------------------------- |
+| Return in expression field / ⌘Return | Record expression / function                                         |
+| ⌘K                                   | Clear expression                                                     |
+| ⇧⌘F                                  | Function library                                                     |
+| ⇧⌘C                                  | Copy numerical preview at full precision                             |
+| ⇧⌘V                                  | Paste into the expression's selection                                |
+| ⌘G                                   | Show / hide plot                                                     |
+| ⇧⌘H                                  | Show / hide tape                                                     |
+| ⌘S                                   | Export tape, including full-precision results and evaluation context |
 
 Ordinary typing, selection, copy/paste, and native keyboard undo remain available in text fields. **Known public API limit:** keypad edits, recall, and other programmatic binding replacements reset the text field's native undo history. The example does not bypass this using private toolkit APIs. Explicit keypad editing cancels active IME composition; ordinary IME entry follows Stana's native text path.
 

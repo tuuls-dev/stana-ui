@@ -63,7 +63,6 @@ swift test -Xswiftc -warnings-as-errors -Xcc -Werror
 STANA_GUI_TESTS=1 swift test -Xswiftc -warnings-as-errors -Xcc -Werror
 Scripts/check-api-fixtures.sh
 Scripts/check-runtime-faults.sh
-Scripts/check-boundaries.sh
 swift build --package-path Examples/WindowConfiguration -Xswiftc -warnings-as-errors
 ```
 

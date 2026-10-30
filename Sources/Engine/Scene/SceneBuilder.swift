@@ -48,7 +48,7 @@ package struct EditingPaint {
 	package let document: Document
 	private var previous: [STNNodeID: Item] = [:]
 	private var previousOrder: [STNNodeID] = []
-	private var contentVersions: [STNNodeID: UUID] = [:]
+	private var contentVersions: [STNNodeID: RenderVersion] = [:]
 	private var previousGeometry: PresentationGeometry?
 	private var previousCompositing: [STNNodeID: NodeStyle] = [:]
 	private var previousGPU: [STNNodeID: STNGPUDrawing] = [:]
@@ -327,7 +327,7 @@ package struct EditingPaint {
 				damage.add(previous[node.id]?.bounds ?? .zero)
 				damage.add(item.bounds)
 				document.metrics.recordedPaintItems += 1
-				contentVersions[node.id] = UUID()
+				contentVersions[node.id] = RenderVersion()
 			}
 
 			let isolated = node.kind == .root || style.retained || opacity != 1 || style.clip || node.kind == .scroll
@@ -425,7 +425,7 @@ package struct EditingPaint {
 				let commands = record(node)
 				let item = Item(commands: commands, bounds: node.bounds)
 				if previous[id] != item {
-					contentVersions[id] = UUID()
+					contentVersions[id] = RenderVersion()
 					previous[id] = item
 					document.metrics.recordedPaintItems += 1
 				}

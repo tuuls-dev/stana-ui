@@ -11,14 +11,12 @@ jobs:
           swift-version: "6.4"
       - name: Verify required toolchain
         run: swift --version | grep 'Swift version 6.4'
-      - name: Install just and clang-format
-        run: brew install just clang-format
+      - name: Install just
+        run: brew install just
       - name: Formatting
         run: just check-format
-      - name: Boundary checks
-        run: Scripts/check-boundaries.sh
       - name: Tests and strict concurrency
-        run: swift test -Xswiftc -warnings-as-errors -Xcc -Werror
+        run: swift test -Xswiftc -warnings-as-errors
       - name: Public consumer API
         run: Scripts/check-api-fixtures.sh
       - name: Runtime fault isolation

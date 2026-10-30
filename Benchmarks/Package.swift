@@ -12,6 +12,11 @@ let package = Package(
 				.product(name: "Stana", package: "stana-ui"),
 				.product(name: "StanaTesting", package: "stana-ui"),
 			]
-		)
+		),
+		.executableTarget(
+			name: "NativeRenderingBenchmarks",
+			dependencies: [.product(name: "Stana", package: "stana-ui")],
+			resources: [.copy("Resources")]
+		),
 	]
 )

@@ -1,10 +1,10 @@
-import Foundation
+import StanaPrimitives
 
 /// An immutable balanced ordered sequence. Replacing one item shares untouched
 /// branches rather than copying a containing group's complete sibling array.
 package struct PaintSequence: Equatable, Sendable, Sequence {
 	package final class Branch: Sendable {
-		package let version = UUID()
+		package let version = RenderVersion()
 		package let left: Branch?
 		package let right: Branch?
 		package let entry: PaintEntry

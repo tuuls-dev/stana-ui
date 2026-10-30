@@ -2,7 +2,7 @@
 
 ## Current release tier
 
-Developer preview. Swift 6.4, Swift 6 language mode, macOS 26 deployment target. Native backend: worker Core Graphics/Core Text rasterization plus retained Metal composition and a private Objective-C host. No Windows/Linux host implementation and no production/performance claim.
+Developer preview. Swift 6.4, Swift 6 language mode, macOS 26 deployment target. Native backend: worker Core Graphics/Core Text rasterization plus retained Metal composition and a Swift AppKit host. No Windows/Linux host implementation and no production/performance claim.
 
 The deployment target is not evidence that every OS/architecture combination has been tested. Automated/local evidence is recorded in `Verification/Results.md`; manual checks remain separate.
 
@@ -32,3 +32,5 @@ Window configuration coverage, ignored-feature behavior and remaining manual qua
 Text-field behavior, native service coverage, captures, and pending interoperability checks are recorded in [Text-field verification](Verification/TextFields.md).
 
 Hybrid rendering evidence, benchmark commands, and remaining qualification are recorded in [Metal verification](Verification/Metal.md).
+
+The Swift backend’s coordinate-input regression and remaining qualification limits are recorded in [Metal verification](Verification/Metal.md).

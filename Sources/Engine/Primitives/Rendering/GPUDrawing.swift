@@ -29,7 +29,7 @@ public struct STNGPUVertex: Hashable, Sendable {
 
 /// Immutable indexed triangle storage. Copies retain the same identity.
 public struct STNGPUMesh: Equatable, Sendable {
-	package let version = UUID()
+	package let version = RenderVersion()
 	package let vertices: [STNGPUVertex]
 	package let indices: [UInt32]
 
@@ -92,7 +92,7 @@ package enum GPUCommand: Equatable, Sendable {
 
 /// Ordered GPU operations in canvas-local top-left coordinates.
 public struct STNGPUDrawing: Equatable, Sendable {
-	package private(set) var version = UUID()
+	package private(set) var version = RenderVersion()
 	package private(set) var commands: [GPUCommand] = []
 
 	public init() {}
@@ -116,29 +116,29 @@ public struct STNGPUDrawing: Equatable, Sendable {
 	private mutating func appendRect(_ rect: STNRect, radius: Double, color: GPUColor) {
 		precondition(radius.isFinite && radius >= 0)
 		commands.append(.rect(rect, radius, color))
-		version = UUID()
+		version = RenderVersion()
 	}
 
 	public mutating func fillEllipse(_ rect: STNRect, color: STNColor) {
 		commands.append(.ellipse(rect, GPUColor(color)))
-		version = UUID()
+		version = RenderVersion()
 	}
 
 	public mutating func fillEllipse(_ rect: STNRect, color: STNExtendedColor) {
 		commands.append(.ellipse(rect, GPUColor(color)))
-		version = UUID()
+		version = RenderVersion()
 	}
 
 	public mutating func drawMesh(_ mesh: STNGPUMesh) {
 		commands.append(.mesh(mesh))
-		version = UUID()
+		version = RenderVersion()
 	}
 
 	public mutating func strokePolyline(_ points: [STNPoint], color: STNColor, width: Double = 1, closed: Bool = false)
 	{
 		precondition(width.isFinite && width >= 0)
 		commands.append(.polyline(points, width, GPUColor(color), closed))
-		version = UUID()
+		version = RenderVersion()
 	}
 
 	public mutating func strokePolyline(
@@ -149,7 +149,7 @@ public struct STNGPUDrawing: Equatable, Sendable {
 	) {
 		precondition(width.isFinite && width >= 0)
 		commands.append(.polyline(points, width, GPUColor(color), closed))
-		version = UUID()
+		version = RenderVersion()
 	}
 
 	package var requiresExtended: Bool {
