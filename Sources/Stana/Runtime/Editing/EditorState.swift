@@ -25,6 +25,7 @@ import StanaText
 	var dragUnit = 1
 	var dragInitial = NSRange(location: 0, length: 0)
 	var dragPoint = STNPoint.zero
+	var widthMeasurement: (text: String, font: STNFont, width: Double)?
 
 	init(callbacks: EditorCallbacks) {
 		self.callbacks = callbacks
@@ -181,7 +182,7 @@ extension MountSession {
 		}
 
 		if state.dragging {
-			let inner = node.bounds.inset(by: node.style.padding)
+			let inner = node.bounds.inset(by: node.style.padding, direction: document.direction)
 			if state.dragPoint.x < inner.minX || state.dragPoint.x > inner.maxX {
 				let delta = (state.dragPoint.x < inner.minX ? -240.0 : 240.0) * seconds
 				editorOffsets[id] = max(0, (editorOffsets[id] ?? 0) + delta)
@@ -282,7 +283,8 @@ extension MountSession {
 		let paint = editingPaint(node, ensureCaret: false)
 		let shown = node.style.secure ? String(repeating: "•", count: editor.text.utf16.count) : editor.text
 		let font = STNFont.system(size: node.style.font.size * document.textScale, weight: node.style.font.weight)
-		let x = point.x - node.bounds.minX - node.style.padding.leading + (paint?.offset ?? 0)
+		let inner = node.bounds.inset(by: node.style.padding, direction: document.direction)
+		let x = point.x - inner.minX + (paint?.offset ?? 0)
 		return TextBoundaries.snap(text.index(in: shown, x: x, font: font), in: editor.text)
 	}
 

@@ -71,7 +71,8 @@ import StanaText
 				document.metrics.measureCacheHits += 1
 			}
 			node.measured = size
-			return size
+			refreshArrangementBaselines(node)
+			return node.measured
 		}
 
 		let oldSize = node.measured
@@ -143,63 +144,77 @@ import StanaText
 				cross = max(cross, horizontal ? s.height : s.width)
 			}
 
-			var remaining = maxMain.isFinite ? max(0, maxMain - main) : 0
-			var unsettled = flexible
-			var allocations: [STNNodeID: Double] = [:]
-			while !unsettled.isEmpty {
-				if document.layoutCountersEnabled {
-					document.metrics.flexDistributionRounds += 1
-				}
-				let largestWeight = unsettled.map(weight).max() ?? 1
-				let totalWeight = unsettled.reduce(0) { $0 + weight($1) / largestWeight }
-				var minima: [NodeRecord] = []
-				var maxima: [NodeRecord] = []
-				var sum = 0.0
-				for child in unsettled {
-					let f = child.style.frame
-					let minV = horizontal ? (f.width ?? f.minWidth) : (f.height ?? f.minHeight)
-					let maxV = horizontal ? (f.width ?? f.maxWidth) : (f.height ?? f.maxHeight)
-					let share = maxMain.isFinite ? remaining * (weight(child) / largestWeight / totalWeight) : minV
-					let allocation = min(maxV, max(minV, share))
-					allocations[child.id] = allocation
-					sum += allocation
-					if share < minV {
-						minima.append(child)
-					}
-
-					if share > maxV {
-						maxima.append(child)
-					}
-				}
-
-				if !maxMain.isFinite || abs(sum - remaining) < 0.000_001 {
-					break
-				}
-
-				// Freeze only the constraints on the side containing the solution.
-				// Freezing minima and maxima together can strand distributable space.
-				let settled = sum > remaining ? minima : maxima
-				if settled.isEmpty {
-					break
-				}
-
-				for child in settled {
-					remaining = max(0, remaining - (allocations[child.id] ?? 0))
-				}
-
-				let ids = Set(settled.map(\.id))
-				unsettled.removeAll { ids.contains($0.id) }
-			}
-
-			for child in flexible {
-				let allocation = allocations[child.id] ?? 0
-				let c =
+			if !maxMain.isFinite {
+				// Fill consumes finite space only. On an unbounded axis, preserve
+				// intrinsic content and let each child's own frame constrain it.
+				let proposal =
 					horizontal
-					? STNConstraints(minWidth: allocation, maxWidth: allocation, maxHeight: inner.maxHeight)
-					: STNConstraints(maxWidth: inner.maxWidth, minHeight: allocation, maxHeight: allocation)
-				let s = measure(child, under: c, depth: depth + 1)
-				main += horizontal ? s.width : s.height
-				cross = max(cross, horizontal ? s.height : s.width)
+					? STNConstraints(maxHeight: inner.maxHeight)
+					: STNConstraints(maxWidth: inner.maxWidth)
+				for child in flexible {
+					let size = measure(child, under: proposal, depth: depth + 1)
+					main += horizontal ? size.width : size.height
+					cross = max(cross, horizontal ? size.height : size.width)
+				}
+			} else {
+				var remaining = max(0, maxMain - main)
+				var unsettled = flexible
+				var allocations: [STNNodeID: Double] = [:]
+				while !unsettled.isEmpty {
+					if document.layoutCountersEnabled {
+						document.metrics.flexDistributionRounds += 1
+					}
+					let largestWeight = unsettled.map(weight).max() ?? 1
+					let totalWeight = unsettled.reduce(0) { $0 + weight($1) / largestWeight }
+					var minima: [NodeRecord] = []
+					var maxima: [NodeRecord] = []
+					var sum = 0.0
+					for child in unsettled {
+						let f = child.style.frame
+						let minV = horizontal ? (f.width ?? f.minWidth) : (f.height ?? f.minHeight)
+						let maxV = horizontal ? (f.width ?? f.maxWidth) : (f.height ?? f.maxHeight)
+						let share = remaining * (weight(child) / largestWeight / totalWeight)
+						let allocation = min(maxV, max(minV, share))
+						allocations[child.id] = allocation
+						sum += allocation
+						if share < minV {
+							minima.append(child)
+						}
+
+						if share > maxV {
+							maxima.append(child)
+						}
+					}
+
+					if abs(sum - remaining) < 0.000_001 {
+						break
+					}
+
+					// Freeze only the constraints on the side containing the solution.
+					// Freezing minima and maxima together can strand distributable space.
+					let settled = sum > remaining ? minima : maxima
+					if settled.isEmpty {
+						break
+					}
+
+					for child in settled {
+						remaining = max(0, remaining - (allocations[child.id] ?? 0))
+					}
+
+					let ids = Set(settled.map(\.id))
+					unsettled.removeAll { ids.contains($0.id) }
+				}
+
+				for child in flexible {
+					let allocation = allocations[child.id] ?? 0
+					let c =
+						horizontal
+						? STNConstraints(minWidth: allocation, maxWidth: allocation, maxHeight: inner.maxHeight)
+						: STNConstraints(maxWidth: inner.maxWidth, minHeight: allocation, maxHeight: allocation)
+					let s = measure(child, under: c, depth: depth + 1)
+					main += horizontal ? s.width : s.height
+					cross = max(cross, horizontal ? s.height : s.width)
+				}
 			}
 
 			// Flexible text must be measured before aggregating baseline ascent/descent.
@@ -246,15 +261,8 @@ import StanaText
 			node.scrollOffset = node.normalizedScrollOffset(node.scrollOffset, in: result)
 		}
 
-		if node.kind == .hStack && node.style.alignment == .firstBaseline {
-			node.baseline = children.isEmpty ? nil : p.top + commonBaseline(children)
-		} else if node.baseline == nil {
-			arrange(node, children: children, in: .init(width: result.width, height: result.height)) { child, rect in
-				if node.baseline == nil, let baseline = child.baseline {
-					node.baseline = rect.minY + baseline
-				}
-			}
-		}
+		updateContainerBaseline(node, children: children)
+		node.baselineArrangementVersion = node.arrangementVersion
 
 		if document.layoutCountersEnabled,
 			oldSize != result || oldBaseline != node.baseline || oldContentSize != node.contentSize
@@ -272,6 +280,68 @@ import StanaText
 		return result
 	}
 
+	/// Exported baselines include local placement (notably scroll offsets), but
+	/// refreshing them must not discard text measurements or child proposals.
+	private func refreshArrangementBaselines(_ node: NodeRecord) {
+		guard node.baselineArrangementVersion != node.arrangementVersion else {
+			return
+		}
+
+		let children = arrangedChildren(node)
+		var sizingChanged = false
+		for child in children {
+			let oldSize = child.measured
+			let oldBaseline = child.baseline
+			refreshArrangementBaselines(child)
+			if child.measured != oldSize
+				|| (node.kind == .hStack && node.style.alignment == .firstBaseline && child.baseline != oldBaseline)
+			{
+				sizingChanged = true
+			}
+		}
+
+		if sizingChanged, let proposal = node.measureCache.keys.first?.base as? STNConstraints {
+			// A moving exported baseline can change a baseline row's intrinsic
+			// height. Recompute dependent container sizing, retaining leaf caches.
+			node.measureCache.removeAll(keepingCapacity: true)
+			_ = measure(node, under: proposal)
+			return
+		}
+
+		let old = node.baseline
+		if node.kind == .scroll {
+			node.scrollOffset = node.normalizedScrollOffset(node.scrollOffset, in: node.measured)
+		}
+
+		updateContainerBaseline(node, children: children)
+		node.baselineArrangementVersion = node.arrangementVersion
+		if document.layoutCountersEnabled, old != node.baseline {
+			document.metrics.layoutOutputChanges += 1
+		}
+	}
+
+	private func updateContainerBaseline(_ node: NodeRecord, children: [NodeRecord]) {
+		switch node.kind {
+		case .text, .button, .toggle, .textField:
+			return
+		default:
+			break
+		}
+
+		node.baseline = nil
+		if node.kind == .hStack && node.style.alignment == .firstBaseline {
+			node.baseline = children.isEmpty ? nil : node.style.padding.top + commonBaseline(children)
+		} else {
+			arrange(node, children: children, in: .init(width: node.measured.width, height: node.measured.height)) {
+				child,
+				rect in
+				if node.baseline == nil, let baseline = child.baseline {
+					node.baseline = rect.minY + baseline
+				}
+			}
+		}
+	}
+
 	private func alignmentBaseline(_ child: NodeRecord) -> Double {
 		child.baseline ?? max(0, child.measured.height - child.style.padding.bottom)
 	}
@@ -284,11 +354,14 @@ import StanaText
 		if document.layoutCountersEnabled {
 			document.metrics.placementVisits += 1
 		}
-		if node.bounds == bounds && node.placedMeasureVersion == node.measureVersion {
+		if node.bounds == bounds && node.placedMeasureVersion == node.measureVersion
+			&& node.placedArrangementVersion == node.arrangementVersion
+		{
 			return
 		}
 
 		node.placedMeasureVersion = node.measureVersion
+		node.placedArrangementVersion = node.arrangementVersion
 		document.metrics.placedNodes += 1
 		node.bounds = bounds
 		if node.kind == .scroll {
@@ -307,7 +380,7 @@ import StanaText
 		in bounds: STNRect,
 		_ apply: (NodeRecord, STNRect) -> Void
 	) {
-		let inner = bounds.inset(by: node.style.padding)
+		let inner = bounds.inset(by: node.style.padding, direction: document.direction)
 		if node.kind == .hStack || node.kind == .vStack {
 			let horizontal = node.kind == .hStack
 			let rtl = horizontal && document.direction == .rightToLeft

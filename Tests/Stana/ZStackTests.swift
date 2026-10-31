@@ -44,14 +44,15 @@ import Testing
 		for (index, direction) in [STNLayoutDirection.leftToRight, .rightToLeft].enumerated() {
 			host.environment.layoutDirection.value = direction
 			let children = host.nodes.filter { $0.kind == "box" }
+			let left = direction == .leftToRight ? padding.leading : padding.trailing
 			try #require(children.count == 2)
 			#expect(
 				children[0].bounds
-					== STNRect(x: padding.leading + smallX[index], y: padding.top + 30, width: 10, height: 20)
+					== STNRect(x: left + smallX[index], y: padding.top + 30, width: 10, height: 20)
 			)
 			#expect(
 				children[1].bounds
-					== STNRect(x: padding.leading + largeX[index], y: padding.top + 10, width: 40, height: 60)
+					== STNRect(x: left + largeX[index], y: padding.top + 10, width: 40, height: 60)
 			)
 			#expect(host.nodeIDs == ids)
 		}

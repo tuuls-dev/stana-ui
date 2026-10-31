@@ -87,7 +87,7 @@ enum Workload: String, CaseIterable {
 		case .scrolling:
 			let scroll = container.parent!
 			scroll.scrollOffset.y = 5
-			document.changed(scroll, .all)
+			document.invalidateArrangement(scroll)
 		case .flex:
 			document.viewport.width += 10
 			document.changed(document.root, .all)
