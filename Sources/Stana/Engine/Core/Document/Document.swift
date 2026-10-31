@@ -3,7 +3,7 @@ import StanaPrimitives
 
 package enum NodeKind: String, Sendable {
 	case root, group, box, hStack, vStack, zStack, spacer, text, image, button, toggle, textField, scroll, canvas,
-		focusScope, gpuCanvas, layer, backdrop
+		focusScope, gpuCanvas, layer, backdrop, symbol
 }
 
 package struct Dirty: OptionSet, Sendable {
@@ -78,6 +78,7 @@ package struct NodeStyle: Equatable, Sendable {
 	package var isOn = false
 	package var textBinding: STNBinding<String>?
 	package var toggleBinding: STNBinding<Bool>?
+	package var symbol: SymbolContent?
 	package var imageData: Data?
 	package var bounds = STNRect.zero {
 		didSet {
@@ -701,5 +702,20 @@ package enum WorkSpan: String, CaseIterable, Sendable {
 			}
 		}
 		return nil
+	}
+}
+
+package struct SymbolContent: Equatable, Sendable {
+	package var asset: SymbolStorage
+	package var size: Double = 24
+	package var color = STNColor.text
+	package var strokeWidth: Double?
+	package var inkBounds: STNRect? = .zero
+	package var effect = SymbolEffectSample()
+	package var generation: UInt64 = 0
+	package var available = true
+
+	package init(asset: SymbolStorage) {
+		self.asset = asset
 	}
 }

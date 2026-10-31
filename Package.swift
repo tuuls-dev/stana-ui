@@ -1,7 +1,30 @@
 // swift-tools-version: 6.4
 import PackageDescription
+import CompilerPluginSupport
 
 let targets: [Target] = [
+	.target(name: "StanaSymbolCompiler", path: "Sources/StanaSymbolCompiler"),
+	.macro(
+		name: "StanaSymbolMacros",
+		dependencies: [
+			"StanaSymbolCompiler",
+			.product(name: "SwiftSyntax", package: "swift-syntax"),
+			.product(name: "SwiftSyntaxBuilder", package: "swift-syntax"),
+			.product(name: "SwiftDiagnostics", package: "swift-syntax"),
+			.product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
+			.product(name: "SwiftCompilerPlugin", package: "swift-syntax"),
+		],
+		path: "Sources/StanaSymbolMacros"
+	),
+	.testTarget(name: "StanaSymbolCompilerTests", dependencies: ["StanaSymbolCompiler"], path: "Tests/SymbolCompiler"),
+	.testTarget(
+		name: "StanaSymbolMacrosTests",
+		dependencies: [
+			"StanaSymbolMacros",
+			.product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
+		],
+		path: "Tests/SymbolMacros"
+	),
 	.executableTarget(
 		name: "LayoutBenchmarks",
 		dependencies: ["StanaLayout", "StanaText", "StanaAccessibility", "StanaPlatformMacOS"],
@@ -44,7 +67,7 @@ let targets: [Target] = [
 		name: "Stana",
 		dependencies: [
 			"StanaPrimitives", "StanaCore", "StanaLayout", "StanaText", "StanaScene", "StanaAccessibility",
-			"StanaPlatform", "StanaPlatformMacOS",
+			"StanaPlatform", "StanaPlatformMacOS", "StanaSymbolMacros",
 		],
 		exclude: ["Engine"],
 		resources: [.copy("Resources")]
@@ -99,6 +122,7 @@ let package = Package(
 		.library(name: "Stana", targets: ["Stana"]),
 		.library(name: "StanaTesting", targets: ["StanaTesting"]),
 	],
+	dependencies: [.package(url: "https://github.com/swiftlang/swift-syntax.git", exact: "604.0.0")],
 	targets: targets,
 	swiftLanguageModes: [.v6]
 )

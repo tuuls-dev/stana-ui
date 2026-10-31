@@ -96,3 +96,21 @@ extension STNComputed: STNPropertyConvertible {
 		STNProperty(self)
 	}
 }
+
+extension STNSymbolAsset: STNPropertyConvertible {
+	@MainActor public func asProperty() -> STNProperty<STNSymbolAsset> {
+		STNProperty(self)
+	}
+}
+
+extension STNSymbolPlayback: STNPropertyConvertible {
+	@MainActor public func asProperty() -> STNProperty<STNSymbolPlayback> {
+		STNProperty(self)
+	}
+}
+
+extension Optional: STNPropertyConvertible where Wrapped == Double {
+	@MainActor public func asProperty() -> STNProperty<Double?> {
+		STNProperty(self)
+	}
+}

@@ -190,6 +190,7 @@ extension MacOSWindow {
 		state.isTabBarVisible = window.tabGroup?.isTabBarVisible ?? false
 		state.isTabOverviewVisible = window.tabGroup?.isOverviewVisible ?? false
 		self.state = state
+		publishSymbolVisibility()
 		onState?(state)
 	}
 

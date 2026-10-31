@@ -6,6 +6,7 @@ package enum DrawCommand: Equatable, Sendable {
 	case stroke(STNRect, STNColor, width: Double, radius: Double)
 	case text(String, STNRect, STNFont, STNColor, wraps: Bool)
 	case image(Data, STNRect)
+	case symbol(STNNodeID, SymbolPresentation)
 	case pushClip(STNRect)
 	case popClip
 	case pushOpacity(Double)

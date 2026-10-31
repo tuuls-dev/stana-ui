@@ -15,8 +15,24 @@ let package = Package(name: "Probe", platforms: [.macOS(.v26)],
     dependencies: [.package(path: %s)],
     targets: [.target(name: "Probe", dependencies: [.product(name: "Stana", package: "stana-ui")])])
 ''' % json.dumps(root))
+# Generate large literal rejection fixtures without checking megabytes of repeated SVG into Git.
+invalid = Path(probe, 'Invalid')
+invalid.mkdir()
+prefix, suffix = "<svg viewBox='0 0 1 1'>", "</svg>"
+cases = {
+    'SymbolByteLimit': prefix + '<!--' + 'x' * 1_048_576 + '-->' + suffix,
+    'SymbolElementLimit': prefix + '<g/>' * 4096 + suffix,
+    'SymbolDepthLimit': prefix + '<g>' * 64 + '</g>' * 64 + suffix,
+    'SymbolCommandLimit': prefix + "<path d='M0 0" + 'L0 0' * 65536 + "'/>" + suffix,
+    'SymbolTransformLimit': prefix + "<g transform='" + 'translate(0) ' * 65 + "'/>" + suffix,
+    'SymbolNumericLimit': prefix + "<path d='M1000000001 0'/>" + suffix,
+}
+for name, svg in cases.items():
+    (invalid / (name + '.swift')).write_text(
+        'import Stana\n@MakeSTNSymbol struct Invalid { static let svg = ' + json.dumps(svg) + ' }\n'
+    )
 PY
-for task_fixture in "$task_root"/Fixtures/API/Invalid/*.swift; do
+for task_fixture in "$task_root"/Fixtures/API/Invalid/*.swift "$task_probe"/Invalid/*.swift; do
     cp "$task_fixture" "$task_probe/Sources/Probe/Invalid.swift"
     if swift build --package-path "$task_probe" >"$task_probe/build.log" 2>&1; then
         echo "Unexpected compilation success: $task_fixture" >&2; exit 1

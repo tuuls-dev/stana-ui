@@ -23,6 +23,8 @@ import StanaText
 	package var onClose: (() -> Void)?
 	private var environmentSubscriptions: [STNSubscription] = []
 	private var closed = false
+	package var symbols: [STNNodeID: MountedSymbol] = [:]
+	package var symbolHostVisible = true
 	package var frameRegistrations: [FrameRegistration] = []
 	package var frameTargetTimestamp: Double = 0
 	package var framePeriod: Double = 0
@@ -51,12 +53,15 @@ import StanaText
 		scene = SceneBuilder(document: document)
 		semantics = SemanticProjection(document: document)
 		document.ensureGeometry = { [weak self] in self?.layout.layout() }
+
 		document.onCommit = { [weak self] in self?.commit() }
+
 		document.onDisposed = { [weak self] id in
 			self?.editors.removeValue(forKey: id)
 			self?.editorOffsets.removeValue(forKey: id)
 			self?.editorStates.removeValue(forKey: id)
 		}
+
 		document.onEditingFocusLoss = { [weak self] id in
 			guard let self, let editor = self.editors[id] else {
 				return
@@ -66,9 +71,11 @@ import StanaText
 			try? editor.commitComposition()
 			(self.window as? MacOSWindow)?.discardMarkedText()
 		}
+
 		document.onDefaultPointer = { [weak self] phase, node, event in
 			self?.editorPointer(phase, node: node, event: event)
 		}
+
 		scene.editing = { [weak self] node in self?.editingPaint(node) }
 	}
 
@@ -97,14 +104,22 @@ import StanaText
 					self.document.invalidateEnvironment(layout: layout)
 				}
 			}
+
 			document.root.scope.own { subscription.cancel() }
+
 			environmentSubscriptions.append(subscription)
 		}
 
 		own(environment.isDark) { [weak self] in self?.document.dark = $0 }
+
 		own(environment.highContrast) { [weak self] in self?.document.highContrast = $0 }
+
 		own(environment.layoutDirection, invalidates: false) { [weak self] in self?.document.direction = $0 }
+
+		own(environment.reducedMotion) { _ in }
+
 		own(environment.theme) { [weak self] in self?.document.theme = $0 }
+
 		own(environment.textScale, layout: true) { [weak self] value in
 			precondition(value.isFinite && value > 0 && value <= 10, "Stana: text scale must be in 0...10")
 			self?.document.textScale = value
@@ -116,25 +131,50 @@ import StanaText
 		if let native = window as? MacOSWindow {
 			document.usesPresentationGeometry = true
 			native.graphics.onGeometry = { [weak self] geometry, confirmed, preserveAmbiguity in
-				guard let self else { return }
+				guard let self else {
+					return
+				}
+
 				self.document.publishPresentation(geometry, confirmed: confirmed, preserveAmbiguity: preserveAmbiguity)
 				self.publishEditing()
 				self.window?.accessibility.publish(self.semantics.snapshot())
 			}
+
 			native.graphics.onFailure = { [weak self] message in self?.report(.nativeFailure(message)) }
+
 			native.graphics.onDiagnostic = { [weak self] node, diagnostic in
 				(try? self?.document.resolve(node))?.onGPUError?(diagnostic)
 			}
 		}
+
 		(window as? MacOSWindow)?.onFrame = { [weak self] timestamp, target in
 			self?.tickFrames(timestamp: timestamp, target: target)
 		}
+
+		if let native = window as? MacOSWindow {
+			native.onSymbolVisibility = { [weak self] visible in
+				guard let self, !self.closed, self.symbolHostVisible != visible else {
+					return
+				}
+
+				self.symbolHostVisible = visible
+				STNTransaction.perform { self.document.changed(self.document.root, .paint) }
+			}
+
+			native.graphics.onSymbolResult = { [weak self] result in self?.symbols[result.node]?.receive(result) }
+
+			symbolHostVisible = native.symbolIsVisible
+		}
+
 		refreshFrameDemand()
 		window.onDraw = { [weak self] in self?.draw() }
+
 		window.onEvent = { [weak self] in self?.receive($0) }
+
 		window.onPointer = { [weak self] phase, point, shift, clicks, button in
 			self?.pointer(phase, at: point, shift: shift, clickCount: clicks, button: button) ?? 0
 		}
+
 		(window as? MacOSWindow)?.onText = { [weak self] kind, text, range, selected, revision, identity in
 			self?
 				.edit(
@@ -146,6 +186,7 @@ import StanaText
 					expectedIdentity: identity
 				)
 		}
+
 		if window.onState == nil {
 			window.onState = { [weak self] state in
 				guard let self else {
@@ -167,7 +208,15 @@ import StanaText
 		}
 
 		layout.layout()
-		for (id, editor) in editors { document.nodes[id]?.textGeometryRevision = editor.revision }
+		for symbol in symbols.values {
+			symbol.reconcile()
+		}
+
+		refreshFrameDemand()
+		for (id, editor) in editors {
+			document.nodes[id]?.textGeometryRevision = editor.revision
+		}
+
 		nodeSnapshots = document.publishedNodeSnapshots()
 		publishEditorEvents()
 		publishEditing()
@@ -205,6 +254,19 @@ import StanaText
 		layout.layout()
 		let planningClock = ContinuousClock()
 		let planningStart = planningClock.now
+		for symbol in symbols.values where symbol.epoch != window.renderer.surfaceEpoch {
+			symbol.epoch = window.renderer.surfaceEpoch
+			symbol.available = true
+			symbol.failedCodes.removeAll()
+			if let node = symbol.node, var content = node.symbol {
+				nextRevision(&content.generation)
+				node.symbol = content
+				document.changed(node, .paint)
+			}
+
+			symbol.reconcile()
+		}
+
 		var snapshot = scene.build(
 			surfaceEpoch: window.renderer.surfaceEpoch,
 			backingRevision: window.renderer.backingRevision
@@ -218,6 +280,7 @@ import StanaText
 		if document.usesPresentationGeometry, document.presentationAcknowledgement != .unknown {
 			document.presentationAcknowledgement = .pending
 		}
+
 		do {
 			_ = try window.renderer.submit(snapshot)
 		} catch STNError.cancelled {
@@ -266,6 +329,7 @@ import StanaText
 		editors[node.id] = editor
 		editorStates[node.id] = EditorState(callbacks: callbacks)
 		editor.wordRange = { [text] in text.wordRange(in: $0, at: $1) }
+
 		if let onMount = callbacks.onMount {
 			document.deferMount { [weak self, weak node] in
 				guard let self, let node, node.scope.isAlive else {
@@ -275,6 +339,7 @@ import StanaText
 				onMount(STNTextFieldHandle(session: self, id: node.id))
 			}
 		}
+
 		editor.onChange = { [weak self, weak node, weak document] value in
 			guard let node, let document, node.scope.isAlive else {
 				return
@@ -288,6 +353,7 @@ import StanaText
 				document.changed(node, .all)
 			}
 		}
+
 		editor.onPresentationChange = { [weak self, weak node, weak document] in
 			guard let node, let document, node.scope.isAlive else {
 				return
@@ -296,6 +362,7 @@ import StanaText
 			self?.resetCaret(node.id)
 			document.changed(node, [.paint, .semantics])
 		}
+
 		let observation = ValueObservation(read: { binding.value }, equals: { $0 == $1 }) {
 			[weak self, weak node, weak editor] value in
 			guard let self, let node, let editor, node.scope.isAlive else {
@@ -318,7 +385,9 @@ import StanaText
 				self.document.changed(node, .all)
 			}
 		}
+
 		node.scope.own { observation.cancel() }
+
 		ReactiveRuntime.shared.enqueue(observation)
 	}
 
@@ -347,6 +416,7 @@ import StanaText
 			width = text.measure(widthText, font: font, maxWidth: .infinity, wraps: false).size.width
 			editorStates[node.id]?.widthMeasurement = (widthText, font, width)
 		}
+
 		let spare = max(0, available - width)
 		let leading = (node.style.alignment == .leading) == (document.direction == .leftToRight)
 		let alignmentOffset = node.style.alignment == .center ? spare / 2 : leading ? 0 : spare
@@ -396,6 +466,7 @@ import StanaText
 			let shown = node.style.secure ? String(repeating: "•", count: value.utf16.count) : value
 			let font = STNFont.system(size: node.style.font.size * document.textScale, weight: node.style.font.weight)
 			let offsets = text.offsets(in: shown, font: font).map { $0 - (paint?.offset ?? 0) }
+
 			let geometry = document.confirmedGeometry
 			let entry = geometry?.entries[id]
 			let matches = entry?.textRevision == editor.revision && entry?.localToHost.inverse != nil
@@ -496,18 +567,28 @@ import StanaText
 						let setting = try? JSONDecoder().decode([Int32].self, from: data),
 						setting.count == 2, (0...6).contains(setting[0]),
 						let policy = STNTextField.TextServicePolicy(rawValue: setting[1])
-					else { return }
+					else {
+						return
+					}
+
 					editorStates[focused]?.options.textServices.setPolicy(policy, at: Int(setting[0]))
 				case 7:
 					guard !node.style.secure, let data = text.data(using: .utf8),
 						let ranges = try? JSONDecoder().decode([[Int]].self, from: data)
-					else { return }
+					else {
+						return
+					}
+
 					let validated = try ranges.map { pair -> NSRange in
-						guard pair.count == 2 else { throw STNError.invalidTextRange }
+						guard pair.count == 2 else {
+							throw STNError.invalidTextRange
+						}
+
 						let range = NSRange(location: pair[0], length: pair[1])
 						_ = try TextIndices.range(utf16: range, in: editor.text)
 						return range
 					}
+
 					editorStates[focused]?.annotationRanges = validated
 				default: break
 				}
@@ -517,6 +598,7 @@ import StanaText
 				report(.invalidTextRange)
 			}
 		}
+
 		if !hasMarkedText {
 			ReactiveRuntime.shared.afterCommit { [weak self] in self?.onStable?() }
 		}
@@ -648,6 +730,7 @@ import StanaText
 				resetCaret(id)
 				document.changed(document.nodes[id] ?? document.root, .paint)
 			}
+
 			if !focused {
 				document.pointer(.cancel, at: .zero)
 				document.setFocus(nil)

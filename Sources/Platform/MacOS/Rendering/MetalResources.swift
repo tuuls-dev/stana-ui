@@ -290,7 +290,13 @@ final class MetalAllocation: Sendable {
 		self.leases = leases
 	}
 
-	func raster(_ commands: [DrawCommand], padded: CGRect, scale: Double) throws {
+	func raster(
+		_ commands: [DrawCommand],
+		padded: CGRect,
+		scale: Double,
+		symbolResults: SymbolRasterResults? = nil,
+		epoch: UInt64 = 0
+	) throws {
 		try storage.withLock { storage in
 			guard let surface = storage.surface, IOSurfaceLock(surface, [], nil) == kIOReturnSuccess else {
 				throw MetalFailure("IOSurface writer lock failed")
@@ -319,7 +325,7 @@ final class MetalAllocation: Sendable {
 			context.scaleBy(x: scale, y: -scale)
 			context.translateBy(x: -padded.minX, y: -padded.minY)
 			var canvas = RasterCanvas()
-			canvas.draw(commands, in: context)
+			canvas.draw(commands, in: context, symbolResults: symbolResults, epoch: epoch)
 			context.flush()
 		}
 	}
@@ -330,6 +336,8 @@ struct RasterJob: Sendable {
 	let commands: [DrawCommand]
 	let padded: CGRect
 	let scale: Double
+	var symbolResults: SymbolRasterResults? = nil
+	var epoch: UInt64 = 0
 }
 
 /// Shared admission bounds workers across all windows.
@@ -388,7 +396,13 @@ actor RasterWorkers {
 								Thread.sleep(forTimeInterval: delay)
 							}
 
-							try job.allocation.raster(job.commands, padded: job.padded, scale: job.scale)
+							try job.allocation.raster(
+								job.commands,
+								padded: job.padded,
+								scale: job.scale,
+								symbolResults: job.symbolResults,
+								epoch: job.epoch
+							)
 						}
 						return RasterTiming(
 							queueDelay: start - enqueued,
