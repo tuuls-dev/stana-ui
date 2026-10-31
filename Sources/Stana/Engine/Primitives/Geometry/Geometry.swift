@@ -93,8 +93,13 @@ public struct STNRect: Hashable, Sendable {
 	}
 
 	public func inset(by p: STNInsets) -> Self {
+		inset(by: p, direction: .leftToRight)
+	}
+
+	/// Resolves logical leading/trailing padding in the given layout direction.
+	public func inset(by p: STNInsets, direction: STNLayoutDirection) -> Self {
 		.init(
-			x: minX + p.leading,
+			x: minX + (direction == .leftToRight ? p.leading : p.trailing),
 			y: minY + p.top,
 			width: max(0, size.width - p.horizontal),
 			height: max(0, size.height - p.vertical)

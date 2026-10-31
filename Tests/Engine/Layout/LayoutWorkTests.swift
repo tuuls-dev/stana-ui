@@ -75,14 +75,56 @@ import Testing
 		engine.layout()
 		d.metrics = .init()
 		scroll.scrollOffset.y = 20
-		d.changed(scroll, .all)
+		d.invalidateArrangement(scroll)
 		engine.layout()
 		#expect(scroll.scrollOffset.y == 20)
 		#expect(d.metrics.textMeasureCalls == 0)
-		#expect(d.metrics.measureVisits == 3)
+		#expect(d.metrics.measureVisits == 1)
+		#expect(d.metrics.measureCalls == 0)
 		#expect(d.metrics.measureCacheHits == 1)
 		#expect(d.metrics.layoutOutputChanges == 2)  // Exported baselines move with scrolling.
 		#expect(d.metrics.placementVisits == 3)
+	}
+
+	@Test func scrollingBaselineContainersMatchUncachedSizingWithoutMeasuringText() {
+		let d = Document(size: .init(width: 300, height: 300))
+		defer {
+			d.close()
+		}
+
+		d.layoutCountersEnabled = true
+		let engine = LayoutEngine(document: d, text: TestTextService())
+		let row = d.create(.hStack, parent: d.root)
+		row.style.alignment = .firstBaseline
+		let scroll = d.create(.scroll, parent: row)
+		scroll.style.frame = .init(width: 100, height: 50)
+		let content = d.create(.vStack, parent: scroll)
+		for _ in 0..<10 {
+			let label = d.create(.text, parent: content)
+			label.text = "content"
+		}
+
+		let peer = d.create(.text, parent: row)
+		peer.text = "peer"
+		peer.style.font = .system(size: 20)
+		engine.layout()
+		for offset in [20.0, 0, 30] {
+			d.metrics = .init()
+			scroll.scrollOffset.y = offset
+			d.invalidateArrangement(scroll)
+			engine.layout()
+			#expect(d.metrics.textMeasureCalls == 0)
+			#expect(scroll.bounds.minY + scroll.baseline! == peer.bounds.minY + peer.baseline!)
+			let cached = d.orderedNodes.map(LayoutGeometry.init)
+			engine.useCache = false
+			d.dirty.insert(.layout)
+			engine.layout()
+			#expect(d.orderedNodes.map(LayoutGeometry.init) == cached)
+			engine.useCache = true
+			// Populate caches again after the deliberately uncached comparison.
+			d.dirty.insert(.layout)
+			engine.layout()
+		}
 	}
 
 	@Test(arguments: [STNLayoutDirection.leftToRight, .rightToLeft])
@@ -113,7 +155,7 @@ import Testing
 		if direction == .leftToRight {
 			#expect(first.bounds.minX == 11)
 		} else {
-			#expect(first.bounds.maxX == 183)
+			#expect(first.bounds.maxX == 189)
 		}
 
 		for width in [150.0, 200] {

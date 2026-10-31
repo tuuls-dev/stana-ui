@@ -25,6 +25,7 @@ import Testing
 
 				if workload == .scrolling {
 					#expect(fixture.document.metrics.textMeasureCalls == 0)
+					#expect(fixture.document.metrics.measureCalls == 0)
 				}
 			}
 		}

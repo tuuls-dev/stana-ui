@@ -17,6 +17,7 @@ package struct Dirty: OptionSet, Sendable {
 	package static let paint = Self(rawValue: 2)
 	package static let semantics = Self(rawValue: 4)
 	package static let compositing = Self(rawValue: 8)
+	package static let geometry = Self(rawValue: 16)
 	package static let all: Self = [.layout, .paint, .semantics]
 }
 
@@ -96,6 +97,9 @@ package struct NodeStyle: Equatable, Sendable {
 	}
 	package var measureVersion: UInt64 = 0
 	package var placedMeasureVersion: UInt64?
+	package var arrangementVersion: UInt64 = 0
+	package var placedArrangementVersion: UInt64?
+	package var baselineArrangementVersion: UInt64?
 	package var measureCache: [AnyHashable: STNSize] = [:]
 	package var onActivate: (() -> Void)?
 	package var onSubmit: (() -> Void)?
@@ -119,7 +123,8 @@ package struct NodeStyle: Equatable, Sendable {
 
 	/// Scroll extents are content coordinates; padding belongs to the viewport.
 	package func scrollRange(in size: STNSize) -> STNPoint {
-		let inner = STNRect(width: size.width, height: size.height).inset(by: style.padding).size
+		let inner = STNRect(width: size.width, height: size.height)
+			.inset(by: style.padding, direction: document?.direction ?? .leftToRight).size
 		return .init(
 			x: max(0, contentSize.width - inner.width),
 			y: max(0, contentSize.height - inner.height)
@@ -242,7 +247,20 @@ package enum WorkSpan: String, CaseIterable, Sendable {
 	package var isClosed = false
 	package var dark = false
 	package var highContrast = false
-	package var direction = STNLayoutDirection.leftToRight
+	package var direction = STNLayoutDirection.leftToRight {
+		didSet {
+			guard direction != oldValue else {
+				return
+			}
+
+			nextRevision(&environmentRevision)
+			for node in nodes.values {
+				nextRevision(&node.arrangementVersion)
+			}
+
+			invalidateArrangement(root)
+		}
+	}
 	package var textScale: Double = 1
 	package var theme: STNTheme?
 	package var onCommit: (() -> Void)?
@@ -322,25 +340,55 @@ package enum WorkSpan: String, CaseIterable, Sendable {
 		}
 
 		metrics.propertyUpdates += 1
-		dirty.formUnion(flags)
+		// Geometry is an invalidation directive, consumed into paint/semantics.
+		dirty.formUnion(flags.subtracting(.geometry))
 		if flags.contains(.paint) { paintChanges[node.id, default: []].insert(.content) }
 		if flags.contains(.compositing) {
 			paintChanges[node.id, default: []].insert(.composite)
 			dirty.insert(.paint)
 		}
+		if flags.contains(.geometry) {
+			paintChanges[node.id, default: []].insert(.geometry)
+			dirty.formUnion([.paint, .semantics])
+		}
 		if flags.contains(.layout) {
-			var current: NodeRecord? = node
-			while let next = current {
-				if layoutCountersEnabled {
-					metrics.layoutDirtyAncestorVisits += 1
-				}
-				nextRevision(&next.inputVersion)
-				next.measureCache.removeAll()
-				current = next.parent
-			}
+			markLayout(node, measurement: true)
 		}
 
 		ReactiveRuntime.shared.scheduleCommit(id: id) { [weak self] in self?.commit() }
+	}
+
+	/// Invalidates sizing inputs and the ancestor proposals that depend on them.
+	package func invalidateMeasurement(_ node: NodeRecord) {
+		changed(node, .all)
+	}
+
+	/// Retains sizing results but revisits placement through every affected ancestor.
+	package func invalidateArrangement(_ node: NodeRecord) {
+		guard !isClosed else {
+			return
+		}
+
+		markLayout(node, measurement: false)
+		changed(node, [.paint, .semantics, .geometry])
+	}
+
+	private func markLayout(_ node: NodeRecord, measurement: Bool) {
+		dirty.insert(.layout)
+		var current: NodeRecord? = node
+		while let next = current {
+			if layoutCountersEnabled {
+				metrics.layoutDirtyAncestorVisits += 1
+			}
+
+			nextRevision(&next.arrangementVersion)
+			if measurement {
+				nextRevision(&next.inputVersion)
+				next.measureCache.removeAll()
+			}
+
+			current = next.parent
+		}
 	}
 
 	package func invalidateEnvironment(layout: Bool) {
@@ -594,7 +642,7 @@ package enum WorkSpan: String, CaseIterable, Sendable {
 				continue
 			}
 
-			let rect = viewport.bounds.inset(by: viewport.style.padding)
+			let rect = viewport.bounds.inset(by: viewport.style.padding, direction: direction)
 			let bounds = node.bounds
 			let dx =
 				bounds.minX < rect.minX
@@ -605,7 +653,7 @@ package enum WorkSpan: String, CaseIterable, Sendable {
 			let old = viewport.scrollOffset
 			viewport.scrollOffset = viewport.normalizedScrollOffset(.init(x: old.x + dx, y: old.y + dy))
 			if viewport.scrollOffset != old {
-				changed(viewport, .all)
+				invalidateArrangement(viewport)
 				ensureGeometry?()
 			}
 		}

@@ -8,6 +8,7 @@ Consumer guides live in the [Stana DocC catalog](../Sources/Stana/Documentation.
 - [Platform support and limitations](PlatformSupport.md)
 - [Architecture decisions](Decisions/)
 - Design: [developer experience](Design/DeveloperExperience.md) and [window configuration](Design/WindowConfiguration.md)
+- [Directional layout and arrangement verification](Verification/Layout.md)
 - [Verification results](Verification/Results.md) and [developer walkthrough](Verification/DeveloperWalkthrough.md)
 - [Archived plans and exploratory design notes](Archive/README.md)
 

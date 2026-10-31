@@ -203,6 +203,6 @@ extension Document {
 			return
 		}
 
-		changed(node, .all)
+		invalidateArrangement(node)
 	}
 }

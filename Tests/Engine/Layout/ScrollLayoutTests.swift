@@ -44,14 +44,15 @@ import Testing
 		#expect(scroll.scrollOffset == .zero)
 	}
 
-	@Test(arguments: [false, true])
-	func wheelAndFocusSharePaddedTerminalOffsetsWithoutNoOpCommits(nested: Bool) {
+	@Test(arguments: [false, true], [STNLayoutDirection.leftToRight, .rightToLeft])
+	func wheelAndFocusSharePaddedTerminalOffsetsWithoutNoOpCommits(nested: Bool, direction: STNLayoutDirection) {
 		let d = Document(size: .init(width: 300, height: 300))
 		defer {
 			d.close()
 		}
 		let engine = LayoutEngine(document: d, text: TestTextService())
 		d.ensureGeometry = { engine.layout() }
+		d.direction = direction
 		let outer = d.create(.scroll, parent: d.root)
 		outer.style.frame = .init(width: 150, height: 150)
 		let scroll = nested ? d.create(.scroll, parent: outer) : outer
@@ -71,10 +72,13 @@ import Testing
 		let wheel = scroll.scrollOffset
 		#expect(wheel == STNPoint(x: 230, y: 220))
 		scroll.scrollOffset = .zero
-		d.changed(scroll, .all)
+		d.invalidateArrangement(scroll)
 		engine.layout()
 		d.setFocus(button.id)
 		#expect(scroll.scrollOffset == wheel)
+		let inner = scroll.bounds.inset(by: scroll.style.padding, direction: direction)
+		#expect(button.bounds.maxX == inner.maxX)
+		#expect(button.bounds.maxY == inner.maxY)
 		#expect(outer.scrollOffset == (nested ? .zero : wheel))
 		d.dirty = []
 		let before = d.metrics

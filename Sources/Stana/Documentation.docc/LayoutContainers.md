@@ -2,6 +2,25 @@
 
 Arrange children side by side, vertically, or in overlapping layers.
 
+## Filling bounded and unbounded space
+
+A frame with an explicit infinite maximum (for example, `STNFrame(maxWidth: .infinity)`)
+fills finite available space on that axis. Flexible stack children share finite
+remaining space by weight, respecting their frame minima, maxima, and explicit dimensions.
+When the stack's main axis is unbounded, fill falls back to intrinsic content and
+frame minimum sizing instead of allocating an exact minimum-only size. Nested
+filling containers keep their content; spacers remain intrinsically empty and
+resolve to their minimum length. There is no implicit flex shrink pass.
+
+## Logical padding
+
+Leading and trailing padding follow the document direction: leading is physical
+left in LTR and physical right in RTL. Unequal padding therefore mirrors the
+content origin consistently for layout, drawing, text-field carets/selections,
+pointer mapping, text services, and focus scrolling. Top/bottom and total padding
+are unchanged. `STNRect.inset(by:direction:)` resolves logical insets explicitly;
+the directionless `inset(by:)` retains its LTR geometry behavior.
+
 ## Overlay alignment
 
 `STNZStack` overlays its children in declaration order; later children paint on top and receive hit tests first. Its size is the largest child on each axis plus padding, subject to its frame. Each child is centered vertically within the padded content rectangle.
@@ -46,3 +65,11 @@ viewport growth, padding changes, and content removal normalize offsets before
 placing content; empty content resets both offsets. Wheel input and keyboard
 focus scrolling use the same limits. A wheel event already at its limit does not
 schedule another update.
+
+Scroll offsets and document direction changes invalidate arrangement and dependent
+paint/semantic geometry while reusing valid measurements. Corner radius changes
+update paint and clip/presentation geometry without layout. Logical bounds and
+semantics are current at commit, before redraw or geometry-dependent input. Text,
+font, frame, padding, and text scale still invalidate measurement. Under the current
+text-service contract, document direction changes content geometry/alignment, not
+the text shaping input.

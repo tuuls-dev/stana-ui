@@ -110,7 +110,7 @@ package struct EditingPaint {
 			)
 		}
 
-		let inner = bounds.inset(by: style.padding)
+		let inner = bounds.inset(by: style.padding, direction: document.direction)
 		let font = STNFont.system(size: style.font.size * document.textScale, weight: style.font.weight)
 		if node.kind == .text || node.kind == .button || node.kind == .toggle {
 			var textBounds = inner
@@ -316,7 +316,7 @@ package struct EditingPaint {
 			previousBackdrops[node.id] = node.backdropEffect
 			let clip = style.clip || node.kind == .scroll ? inheritedClip.intersection(bounds) : inheritedClip
 			let local = record(node)
-			let inner = bounds.inset(by: style.padding)
+			let inner = bounds.inset(by: style.padding, direction: document.direction)
 
 			let opacity = style.opacity * (style.isEnabled ? 1 : 0.5)
 			// Include inherited compositing state so ancestor opacity/clip changes invalidate descendants.
@@ -444,7 +444,7 @@ package struct EditingPaint {
 							with: .gpu(
 								.init(
 									id: id,
-									bounds: node.bounds.inset(by: node.style.padding),
+									bounds: node.bounds.inset(by: node.style.padding, direction: document.direction),
 									drawing: node.gpuDrawing,
 									colors: .init(
 										dark: document.dark,
