@@ -3,6 +3,16 @@ import PackageDescription
 
 let targets: [Target] = [
 	.executableTarget(
+		name: "LayoutBenchmarks",
+		dependencies: ["StanaLayout", "StanaText", "StanaAccessibility", "StanaPlatformMacOS"],
+		path: "Benchmarks/Sources/LayoutBenchmarks"
+	),
+	.testTarget(
+		name: "LayoutBenchmarkTests",
+		dependencies: ["LayoutBenchmarks"],
+		path: "Benchmarks/Tests/LayoutBenchmarkTests"
+	),
+	.executableTarget(
 		name: "NativeInputProbe",
 		dependencies: ["Stana", "StanaCore", "StanaPlatformMacOS"],
 		path: "Fixtures/NativeInput"
@@ -60,7 +70,7 @@ let targets: [Target] = [
 		name: "StanaMacOSIntegrationTests",
 		dependencies: [
 			"Stana", "StanaPlatformMacOS", "StanaPrimitives", "StanaCore", "StanaAccessibility", "StanaScene",
-			"StanaGraphics",
+			"StanaGraphics", "StanaLayout", "StanaText",
 		],
 		path: "Tests/Platform/MacOS"
 	),

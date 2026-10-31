@@ -54,6 +54,14 @@ example:
 benchmark *args:
     @Scripts/benchmark.sh "$@"
 
+# Run one isolated engine layout workload in release mode.
+benchmark-layout *args:
+    @Scripts/benchmark-layout.sh "$@"
+
+# Validate isolated deterministic layout fixtures without timing.
+benchmark-layout-validate:
+    swift run LayoutBenchmarks all --validate --sizes 1,8
+
 # Check every benchmark workload without collecting timings.
 benchmark-validate:
     @Scripts/benchmark.sh all --validate --sizes 1,8
@@ -67,4 +75,4 @@ package package-path product bundle-id:
     Scripts/package-macos-app.sh "$1" "$2" "$3"
 
 # Run all non-GUI verification sequentially, stopping on the first failure.
-check: check-format test check-api check-runtime build-examples build-release benchmark-test
+check: check-format test check-api check-runtime build-examples build-release benchmark-test benchmark-layout-validate

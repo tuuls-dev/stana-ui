@@ -13,6 +13,7 @@ Boxes/stacks/overlays, spacers, shaped labels, bitmap images, custom buttons/tog
 ## Known boundaries
 
 - Shared layout/font inputs are reactive, but do not introduce animation, custom font families, or inherited typography. Text-field common styling belongs to shared groups, not editor Options.
+- Leading/trailing padding and stack/text-field alignment follow document direction. Direction changes do not supply a shaping direction to the current TextService; native shaping continues to follow the text and OS behavior.
 - No virtualized list: scroll views mount all children.
 - ZStack supports logical leading/center/trailing horizontal alignment and vertical centering within its padded content rectangle. Overlay spacing and baseline alignment are not supported; HStack/VStack retain their existing alignment and spacing APIs.
 - Text-field completion uses the platform completion action; inline predictive text and full inline Writing Tools are not implemented. System Services/Writing Tools availability follows OS/device configuration.

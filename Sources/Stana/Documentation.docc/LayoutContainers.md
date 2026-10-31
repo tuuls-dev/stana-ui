@@ -2,6 +2,25 @@
 
 Arrange children side by side, vertically, or in overlapping layers.
 
+## Filling bounded and unbounded space
+
+A frame with an explicit infinite maximum (for example, `STNFrame(maxWidth: .infinity)`)
+fills finite available space on that axis. Flexible stack children share finite
+remaining space by weight, respecting their frame minima, maxima, and explicit dimensions.
+When the stack's main axis is unbounded, fill falls back to intrinsic content and
+frame minimum sizing instead of allocating an exact minimum-only size. Nested
+filling containers keep their content; spacers remain intrinsically empty and
+resolve to their minimum length. There is no implicit flex shrink pass.
+
+## Logical padding
+
+Leading and trailing padding follow the document direction: leading is physical
+left in LTR and physical right in RTL. Unequal padding therefore mirrors the
+content origin consistently for layout, drawing, text-field carets/selections,
+pointer mapping, text services, and focus scrolling. Top/bottom and total padding
+are unchanged. `STNRect.inset(by:direction:)` resolves logical insets explicitly;
+the directionless `inset(by:)` retains its LTR geometry behavior.
+
 ## Overlay alignment
 
 `STNZStack` overlays its children in declaration order; later children paint on top and receive hit tests first. Its size is the largest child on each axis plus padding, subject to its frame. Each child is centered vertically within the padded content rectangle.
@@ -30,3 +49,27 @@ ZStack has no spacing parameter or baseline alignment. `STNHStack` and `STNVStac
 Remove `spacing:` from `STNZStack.Properties`; it previously had no effect. Existing inferred `.leading`, `.center`, and `.trailing` values remain valid, but explicit leading/trailing now affect placement.
 
 An explicitly typed `STNAlignment` value can no longer be passed to ZStack. Change overlay-only declarations from `let alignment: STNAlignment = .leading` to `let alignment: STNZStack.Alignment = .leading`. If configuration is shared with a linear stack, keep separate typed values or explicitly switch over the shared value to map the three horizontal cases; `.firstBaseline` has no overlay equivalent. Keep `STNAlignment` for HStack/VStack.
+
+## Text baselines and scrolling
+
+A first-baseline horizontal stack measures all children, including flexible text,
+before resolving its common baseline. Nested containers propagate the first
+baseline-bearing arranged child's baseline with its local vertical placement;
+box padding and stack alignment therefore contribute to the exported baseline.
+Non-text children have no text baseline and use their bottom content edge only
+when participating in baseline alignment. Explicit frame sizes retain their
+overflow behavior.
+
+Scroll offsets use the padded inner viewport on both axes. Content shrinkage,
+viewport growth, padding changes, and content removal normalize offsets before
+placing content; empty content resets both offsets. Wheel input and keyboard
+focus scrolling use the same limits. A wheel event already at its limit does not
+schedule another update.
+
+Scroll offsets and document direction changes invalidate arrangement and dependent
+paint/semantic geometry while reusing valid measurements. Corner radius changes
+update paint and clip/presentation geometry without layout. Logical bounds and
+semantics are current at commit, before redraw or geometry-dependent input. Text,
+font, frame, padding, and text scale still invalidate measurement. Under the current
+text-service contract, document direction changes content geometry/alignment, not
+the text shaping input.

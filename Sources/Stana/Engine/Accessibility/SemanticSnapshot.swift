@@ -44,6 +44,10 @@ public struct STNSemanticNode: Equatable, Sendable {
 	}
 
 	package func snapshot() -> STNSemanticSnapshot {
+		document.withTiming(.semanticProjection) { buildSnapshot() }
+	}
+
+	private func buildSnapshot() -> STNSemanticSnapshot {
 		if document.isClosed {
 			document.metrics.semanticChanges += previous.count
 			previous.removeAll()

@@ -17,6 +17,7 @@ package struct Dirty: OptionSet, Sendable {
 	package static let paint = Self(rawValue: 2)
 	package static let semantics = Self(rawValue: 4)
 	package static let compositing = Self(rawValue: 8)
+	package static let geometry = Self(rawValue: 16)
 	package static let all: Self = [.layout, .paint, .semantics]
 }
 
@@ -85,8 +86,9 @@ package struct NodeStyle: Equatable, Sendable {
 	}
 	package var measured = STNSize.zero
 	package var contentSize = STNSize.zero
-	package var baseline: Double = 0
+	package var baseline: Double?
 	package var scrollOffset = STNPoint.zero
+
 	package var inputVersion: UInt64 = 0
 	package var textGeometryRevision: UInt64 = 0 {
 		didSet {
@@ -95,6 +97,9 @@ package struct NodeStyle: Equatable, Sendable {
 	}
 	package var measureVersion: UInt64 = 0
 	package var placedMeasureVersion: UInt64?
+	package var arrangementVersion: UInt64 = 0
+	package var placedArrangementVersion: UInt64?
+	package var baselineArrangementVersion: UInt64?
 	package var measureCache: [AnyHashable: STNSize] = [:]
 	package var onActivate: (() -> Void)?
 	package var onSubmit: (() -> Void)?
@@ -114,6 +119,21 @@ package struct NodeStyle: Equatable, Sendable {
 		self.id = id
 		self.kind = kind
 		self.scope = scope
+	}
+
+	/// Scroll extents are content coordinates; padding belongs to the viewport.
+	package func scrollRange(in size: STNSize) -> STNPoint {
+		let inner = STNRect(width: size.width, height: size.height)
+			.inset(by: style.padding, direction: document?.direction ?? .leftToRight).size
+		return .init(
+			x: max(0, contentSize.width - inner.width),
+			y: max(0, contentSize.height - inner.height)
+		)
+	}
+
+	package func normalizedScrollOffset(_ offset: STNPoint, in size: STNSize? = nil) -> STNPoint {
+		let range = scrollRange(in: size ?? bounds.size)
+		return .init(x: min(max(0, offset.x), range.x), y: min(max(0, offset.y), range.y))
 	}
 
 	package func attachLifetime(to owner: LifetimeScope) {
@@ -145,8 +165,26 @@ public struct STNMetrics: Sendable, Equatable {
 	public package(set) var mountedNodes = 0
 	public package(set) var builderExecutions = 0
 	public package(set) var propertyUpdates = 0
+	/// Actual noncollapsed measurement evaluations (cache misses).
 	public package(set) var measureCalls = 0
+	/// Placements that pass the unchanged geometry/version early return.
 	public package(set) var placedNodes = 0
+	/// Opt-in measurement entries, including collapsed nodes and cache hits.
+	public package(set) var measureVisits = 0
+	/// Opt-in hits in the current-proposal measurement cache.
+	public package(set) var measureCacheHits = 0
+	/// Opt-in calls to TextService.measure.
+	public package(set) var textMeasureCalls = 0
+	/// Opt-in placement entries, including early returns.
+	public package(set) var placementVisits = 0
+	/// Opt-in evaluations changing measured size, exported baseline, or content extent.
+	public package(set) var layoutOutputChanges = 0
+	/// Opt-in records inspected when collecting arranged children, including groups/collapsed records.
+	public package(set) var arrangedChildVisits = 0
+	/// Opt-in iterations of flexible-space redistribution.
+	public package(set) var flexDistributionRounds = 0
+	/// Opt-in node/ancestor visits during invalidation, including repeated shared ancestors.
+	public package(set) var layoutDirtyAncestorVisits = 0
 	public package(set) var recordedPaintItems = 0
 	public package(set) var paintAncestorUpdates = 0
 	public package(set) var paintIndexUpdates = 0
@@ -176,12 +214,20 @@ public struct STNNodeSnapshot: Sendable, Equatable {
 	}
 }
 
+package enum WorkSpan: String, CaseIterable, Sendable {
+	case layoutMeasurement, layoutPlacement, nodeSnapshots, semanticProjection
+}
+
 @MainActor package final class Document {
 	package let id = DocumentID()
 	package private(set) var nodes: [STNNodeID: NodeRecord] = [:]
 	package private(set) var serial: UInt64 = 0
 	package private(set) var revision: UInt64 = 0
 	package var metrics = STNMetrics()
+	package var layoutCountersEnabled = false
+	package var enabledTimingSpans: Set<WorkSpan> = []
+	package var timings: [WorkSpan: Duration] = [:]
+
 	package var root: NodeRecord!
 	package var dirty: Dirty = .all
 	package var paintChanges: [STNNodeID: PaintChange] = [:]
@@ -201,7 +247,20 @@ public struct STNNodeSnapshot: Sendable, Equatable {
 	package var isClosed = false
 	package var dark = false
 	package var highContrast = false
-	package var direction = STNLayoutDirection.leftToRight
+	package var direction = STNLayoutDirection.leftToRight {
+		didSet {
+			guard direction != oldValue else {
+				return
+			}
+
+			nextRevision(&environmentRevision)
+			for node in nodes.values {
+				nextRevision(&node.arrangementVersion)
+			}
+
+			invalidateArrangement(root)
+		}
+	}
 	package var textScale: Double = 1
 	package var theme: STNTheme?
 	package var onCommit: (() -> Void)?
@@ -217,6 +276,19 @@ public struct STNNodeSnapshot: Sendable, Equatable {
 	package init(size: STNSize) {
 		viewport = size
 		root = create(.root, parent: nil)
+	}
+
+	package func withTiming<T>(_ span: WorkSpan, _ work: () throws -> T) rethrows -> T {
+		guard enabledTimingSpans.contains(span) else {
+			return try work()
+		}
+
+		let start = ContinuousClock.now
+		defer {
+			timings[span, default: .zero] += start.duration(to: .now)
+		}
+
+		return try work()
 	}
 
 	package func create(_ kind: NodeKind, parent: NodeRecord?, scope: LifetimeScope = LifetimeScope()) -> NodeRecord {
@@ -268,22 +340,55 @@ public struct STNNodeSnapshot: Sendable, Equatable {
 		}
 
 		metrics.propertyUpdates += 1
-		dirty.formUnion(flags)
+		// Geometry is an invalidation directive, consumed into paint/semantics.
+		dirty.formUnion(flags.subtracting(.geometry))
 		if flags.contains(.paint) { paintChanges[node.id, default: []].insert(.content) }
 		if flags.contains(.compositing) {
 			paintChanges[node.id, default: []].insert(.composite)
 			dirty.insert(.paint)
 		}
+		if flags.contains(.geometry) {
+			paintChanges[node.id, default: []].insert(.geometry)
+			dirty.formUnion([.paint, .semantics])
+		}
 		if flags.contains(.layout) {
-			var current: NodeRecord? = node
-			while let next = current {
-				nextRevision(&next.inputVersion)
-				next.measureCache.removeAll()
-				current = next.parent
-			}
+			markLayout(node, measurement: true)
 		}
 
 		ReactiveRuntime.shared.scheduleCommit(id: id) { [weak self] in self?.commit() }
+	}
+
+	/// Invalidates sizing inputs and the ancestor proposals that depend on them.
+	package func invalidateMeasurement(_ node: NodeRecord) {
+		changed(node, .all)
+	}
+
+	/// Retains sizing results but revisits placement through every affected ancestor.
+	package func invalidateArrangement(_ node: NodeRecord) {
+		guard !isClosed else {
+			return
+		}
+
+		markLayout(node, measurement: false)
+		changed(node, [.paint, .semantics, .geometry])
+	}
+
+	private func markLayout(_ node: NodeRecord, measurement: Bool) {
+		dirty.insert(.layout)
+		var current: NodeRecord? = node
+		while let next = current {
+			if layoutCountersEnabled {
+				metrics.layoutDirtyAncestorVisits += 1
+			}
+
+			nextRevision(&next.arrangementVersion)
+			if measurement {
+				nextRevision(&next.inputVersion)
+				next.measureCache.removeAll()
+			}
+
+			current = next.parent
+		}
 	}
 
 	package func invalidateEnvironment(layout: Bool) {
@@ -430,7 +535,13 @@ public struct STNNodeSnapshot: Sendable, Equatable {
 		}
 
 		ensureGeometry?()
-		return orderedNodes.map { STNNodeSnapshot($0, focused: focused) }
+		return publishedNodeSnapshots()
+	}
+
+	package func publishedNodeSnapshots() -> [STNNodeSnapshot] {
+		withTiming(.nodeSnapshots) {
+			orderedNodes.map { STNNodeSnapshot($0, focused: focused) }
+		}
 	}
 
 	package func geometry(_ id: STNNodeID) throws -> STNRect {
@@ -531,7 +642,7 @@ public struct STNNodeSnapshot: Sendable, Equatable {
 				continue
 			}
 
-			let rect = viewport.bounds.inset(by: viewport.style.padding)
+			let rect = viewport.bounds.inset(by: viewport.style.padding, direction: direction)
 			let bounds = node.bounds
 			let dx =
 				bounds.minX < rect.minX
@@ -540,12 +651,9 @@ public struct STNNodeSnapshot: Sendable, Equatable {
 				bounds.minY < rect.minY
 				? bounds.minY - rect.minY : bounds.maxY > rect.maxY ? bounds.maxY - rect.maxY : 0
 			let old = viewport.scrollOffset
-			viewport.scrollOffset = .init(
-				x: min(max(0, old.x + dx), max(0, viewport.contentSize.width - rect.size.width)),
-				y: min(max(0, old.y + dy), max(0, viewport.contentSize.height - rect.size.height))
-			)
+			viewport.scrollOffset = viewport.normalizedScrollOffset(.init(x: old.x + dx, y: old.y + dy))
 			if viewport.scrollOffset != old {
-				changed(viewport, .all)
+				invalidateArrangement(viewport)
 				ensureGeometry?()
 			}
 		}

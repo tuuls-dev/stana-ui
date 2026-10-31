@@ -51,6 +51,7 @@ import Testing
 	@Test func flexRedistributionDoesNotStrandSpaceBetweenMinAndMaxConstraints() {
 		let d = Document(size: .init(width: 100, height: 30))
 		let layout = LayoutEngine(document: d, text: TestTextService())
+		d.layoutCountersEnabled = true
 		var a: NodeRecord!
 		var b: NodeRecord!
 		STNTransaction.perform {
@@ -66,6 +67,7 @@ import Testing
 		layout.layout()
 		#expect(a.bounds.size.width == 30)
 		#expect(b.bounds.size.width == 70)
+		#expect(d.metrics.flexDistributionRounds == 2)
 		d.close()
 	}
 

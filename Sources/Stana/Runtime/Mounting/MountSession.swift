@@ -81,14 +81,21 @@ import StanaText
 	}
 
 	private func observeEnvironment() {
-		func own<V>(_ signal: STNSignal<V>, layout: Bool = false, _ apply: @escaping (V) -> Void) {
+		func own<V>(
+			_ signal: STNSignal<V>,
+			layout: Bool = false,
+			invalidates: Bool = true,
+			_ apply: @escaping (V) -> Void
+		) {
 			let subscription = signal.subscribe { [weak self] value in
 				guard let self, !self.closed else {
 					return
 				}
 
 				apply(value)
-				self.document.invalidateEnvironment(layout: layout)
+				if invalidates {
+					self.document.invalidateEnvironment(layout: layout)
+				}
 			}
 			document.root.scope.own { subscription.cancel() }
 			environmentSubscriptions.append(subscription)
@@ -96,7 +103,7 @@ import StanaText
 
 		own(environment.isDark) { [weak self] in self?.document.dark = $0 }
 		own(environment.highContrast) { [weak self] in self?.document.highContrast = $0 }
-		own(environment.layoutDirection, layout: true) { [weak self] in self?.document.direction = $0 }
+		own(environment.layoutDirection, invalidates: false) { [weak self] in self?.document.direction = $0 }
 		own(environment.theme) { [weak self] in self?.document.theme = $0 }
 		own(environment.textScale, layout: true) { [weak self] value in
 			precondition(value.isFinite && value > 0 && value <= 10, "Stana: text scale must be in 0...10")
@@ -161,7 +168,7 @@ import StanaText
 
 		layout.layout()
 		for (id, editor) in editors { document.nodes[id]?.textGeometryRevision = editor.revision }
-		nodeSnapshots = document.orderedNodes.map { STNNodeSnapshot($0, focused: document.focused) }
+		nodeSnapshots = document.publishedNodeSnapshots()
 		publishEditorEvents()
 		publishEditing()
 		semanticSnapshot = semantics.snapshot()
@@ -332,9 +339,14 @@ import StanaText
 			utf16Index: editor.markedText == nil ? editor.head : NSMaxRange(selected),
 			font: font
 		)
-		let width =
-			text.measure(shown.isEmpty ? node.placeholder : shown, font: font, maxWidth: .infinity, wraps: false).size
-			.width
+		let widthText = shown.isEmpty ? node.placeholder : shown
+		let width: Double
+		if let cached = editorStates[node.id]?.widthMeasurement, cached.text == widthText, cached.font == font {
+			width = cached.width
+		} else {
+			width = text.measure(widthText, font: font, maxWidth: .infinity, wraps: false).size.width
+			editorStates[node.id]?.widthMeasurement = (widthText, font, width)
+		}
 		let spare = max(0, available - width)
 		let leading = (node.style.alignment == .leading) == (document.direction == .leftToRight)
 		let alignmentOffset = node.style.alignment == .center ? spare / 2 : leading ? 0 : spare
@@ -388,7 +400,7 @@ import StanaText
 			let entry = geometry?.entries[id]
 			let matches = entry?.textRevision == editor.revision && entry?.localToHost.inverse != nil
 			let bounds = STNRect(width: node.bounds.size.width, height: node.bounds.size.height)
-				.inset(by: node.style.padding)
+				.inset(by: node.style.padding, direction: document.direction)
 			let transform = entry?.localToHost ?? .identity
 			window.publishText(
 				value,

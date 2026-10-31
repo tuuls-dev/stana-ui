@@ -220,7 +220,7 @@ extension STNProperty where Value: Equatable {
 				node.style.borderWidth = value
 			}
 		cornerRadius?
-			.install(in: context, node: node, dirty: .all) { node, value in
+			.install(in: context, node: node, dirty: [.paint, .semantics, .geometry]) { node, value in
 				precondition(value.isFinite && value >= 0, "Stana: invalid corner radius")
 				node.style.cornerRadius = value
 			}
