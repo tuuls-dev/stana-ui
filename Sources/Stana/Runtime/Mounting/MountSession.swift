@@ -161,7 +161,7 @@ import StanaText
 
 		layout.layout()
 		for (id, editor) in editors { document.nodes[id]?.textGeometryRevision = editor.revision }
-		nodeSnapshots = document.orderedNodes.map { STNNodeSnapshot($0, focused: document.focused) }
+		nodeSnapshots = document.publishedNodeSnapshots()
 		publishEditorEvents()
 		publishEditing()
 		semanticSnapshot = semantics.snapshot()

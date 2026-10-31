@@ -90,7 +90,7 @@ extension Document {
 		event.geometryRevision = geometry.revision
 		event.capture = { [weak self, weak target] in self?.captured = target?.id }
 		event.release = { [weak self] in self?.captured = nil }
-		dispatchSnapshots = orderedNodes.map { STNNodeSnapshot($0, focused: focused) }
+		dispatchSnapshots = publishedNodeSnapshots()
 		defer {
 			dispatchSnapshots = nil
 		}
@@ -197,14 +197,12 @@ extension Document {
 		let localDX = inverse.a * dx + inverse.c * dy
 		let localDY = inverse.b * dx + inverse.d * dy
 
-		node.scrollOffset.x = min(
-			max(0, node.scrollOffset.x - localDX),
-			max(0, node.contentSize.width - node.bounds.size.width)
-		)
-		node.scrollOffset.y = min(
-			max(0, node.scrollOffset.y - localDY),
-			max(0, node.contentSize.height - node.bounds.size.height)
-		)
+		let old = node.scrollOffset
+		node.scrollOffset = node.normalizedScrollOffset(.init(x: old.x - localDX, y: old.y - localDY))
+		guard node.scrollOffset != old else {
+			return
+		}
+
 		changed(node, .all)
 	}
 }

@@ -29,6 +29,11 @@ struct Environment: Encodable {
 struct Report: Encodable {
 	let schemaVersion = 1
 	let suite = "stana-headless-v1"
+	let instrumentation = [
+		"legacyCounters": "always enabled",
+		"layoutTraversalCounters": "disabled",
+		"timingSpans": "disabled; only end-to-end operation clock enabled",
+	]
 	let runID = UUID().uuidString
 	let timestamp = ISO8601DateFormatter().string(from: Date())
 	let mode: String

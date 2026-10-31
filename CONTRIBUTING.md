@@ -50,3 +50,14 @@ cannot require their presence.
 Runtime faults (cycles, forbidden mutation, exhausted budgets) fail deterministically with a diagnostic. Application failures belong in application state. Validate fallible structural plans before mutating the tree.
 
 Public API additions belong in `Stana`; cross-target engine implementation uses `package` visibility. Avoid catch-all helpers/managers and circular subsystem dependencies. Do not initialize `NSApplication` from module loading or a headless test.
+
+## Layout work and timing
+
+Use `just benchmark-layout-validate` for deterministic isolated layout fixture
+validation, and `just benchmark-layout <name> --sizes 100,1000` for release timing.
+See [layout workload and metric definitions](Benchmarks/README.md#isolated-layout-engine-workloads).
+`just check` includes layout regressions, benchmark harness tests and untimed
+layout validation. New traversal counters and phase timing spans are opt-in;
+reports record selected instrumentation. Keep deterministic operation-count gates
+separate from timing samples, and run native Core Text timing separately from
+validation/tests. The consumer-host benchmarks remain end-to-end commit measures.

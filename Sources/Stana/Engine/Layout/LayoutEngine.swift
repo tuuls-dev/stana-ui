@@ -19,16 +19,23 @@ import StanaText
 		}
 
 		let size = document.viewport
-		_ = measure(
-			document.root,
-			under: .init(minWidth: size.width, maxWidth: size.width, minHeight: size.height, maxHeight: size.height)
-		)
-		place(document.root, in: .init(width: size.width, height: size.height))
+		document.withTiming(.layoutMeasurement) {
+			_ = measure(
+				document.root,
+				under: .init(minWidth: size.width, maxWidth: size.width, minHeight: size.height, maxHeight: size.height)
+			)
+		}
+		document.withTiming(.layoutPlacement) {
+			place(document.root, in: .init(width: size.width, height: size.height))
+		}
 		document.dirty.remove(.layout)
 	}
 
 	package func arrangedChildren(_ node: NodeRecord) -> [NodeRecord] {
 		node.children.flatMap { child -> [NodeRecord] in
+			if document.layoutCountersEnabled {
+				document.metrics.arrangedChildVisits += 1
+			}
 			if child.style.visibility == .collapsed {
 				return []
 			}
@@ -49,17 +56,28 @@ import StanaText
 	}
 
 	package func measure(_ node: NodeRecord, under outer: STNConstraints, depth: Int = 0) -> STNSize {
+		if document.layoutCountersEnabled {
+			document.metrics.measureVisits += 1
+		}
 		precondition(depth < 512, "Stana: layout depth budget exceeded")
 		if node.style.visibility == .collapsed {
 			node.measured = .zero
+			node.baseline = nil
 			return .zero
 		}
 
 		if useCache, let size = node.measureCache[AnyHashable(outer)] {
+			if document.layoutCountersEnabled {
+				document.metrics.measureCacheHits += 1
+			}
 			node.measured = size
 			return size
 		}
 
+		let oldSize = node.measured
+		let oldBaseline = node.baseline
+		let oldContentSize = node.contentSize
+		node.baseline = nil
 		document.metrics.measureCalls += 1
 		nextRevision(&node.measureVersion)
 		let c = effective(outer, node.style.frame)
@@ -77,6 +95,9 @@ import StanaText
 				? (node.text.isEmpty
 					? node.placeholder
 					: node.style.secure ? String(repeating: "•", count: node.text.utf16.count) : node.text) : node.text
+			if document.layoutCountersEnabled {
+				document.metrics.textMeasureCalls += 1
+			}
 			let measured = text.measure(
 				content,
 				font: .system(size: node.style.font.size * document.textScale, weight: node.style.font.weight),
@@ -126,6 +147,9 @@ import StanaText
 			var unsettled = flexible
 			var allocations: [STNNodeID: Double] = [:]
 			while !unsettled.isEmpty {
+				if document.layoutCountersEnabled {
+					document.metrics.flexDistributionRounds += 1
+				}
 				let largestWeight = unsettled.map(weight).max() ?? 1
 				let totalWeight = unsettled.reduce(0) { $0 + weight($1) / largestWeight }
 				var minima: [NodeRecord] = []
@@ -167,12 +191,6 @@ import StanaText
 				unsettled.removeAll { ids.contains($0.id) }
 			}
 
-			if horizontal && node.style.alignment == .firstBaseline {
-				cross =
-					(children.map(\.baseline).max() ?? 0)
-					+ (children.map { max(0, $0.measured.height - $0.baseline) }.max() ?? 0)
-			}
-
 			for child in flexible {
 				let allocation = allocations[child.id] ?? 0
 				let c =
@@ -184,8 +202,14 @@ import StanaText
 				cross = max(cross, horizontal ? s.height : s.width)
 			}
 
+			// Flexible text must be measured before aggregating baseline ascent/descent.
+			if horizontal && node.style.alignment == .firstBaseline {
+				cross =
+					commonBaseline(children)
+					+ (children.map { max(0, $0.measured.height - alignmentBaseline($0)) }.max() ?? 0)
+			}
+
 			intrinsic = horizontal ? .init(width: main, height: cross) : .init(width: cross, height: main)
-			node.baseline = (children.first?.baseline ?? cross) + p.top
 		case .scroll:
 			for child in children {
 				let size = measure(child, under: .init(maxWidth: inner.maxWidth), depth: depth + 1)
@@ -217,17 +241,49 @@ import StanaText
 
 		let result = c.clamp(.init(width: intrinsic.width + p.horizontal, height: intrinsic.height + p.vertical))
 		node.measured = result
+		if node.kind == .scroll {
+			// Range normalization needs the final constrained viewport, not its proposal.
+			node.scrollOffset = node.normalizedScrollOffset(node.scrollOffset, in: result)
+		}
+
+		if node.kind == .hStack && node.style.alignment == .firstBaseline {
+			node.baseline = children.isEmpty ? nil : p.top + commonBaseline(children)
+		} else if node.baseline == nil {
+			arrange(node, children: children, in: .init(width: result.width, height: result.height)) { child, rect in
+				if node.baseline == nil, let baseline = child.baseline {
+					node.baseline = rect.minY + baseline
+				}
+			}
+		}
+
+		if document.layoutCountersEnabled,
+			oldSize != result || oldBaseline != node.baseline || oldContentSize != node.contentSize
+		{
+			document.metrics.layoutOutputChanges += 1
+		}
+
 		// A size-only cache cannot restore child proposals from an older pass.
 		// Keep the current proposal only until full placement plans are cached.
+		node.measureCache.removeAll(keepingCapacity: true)
 		if useCache {
-			node.measureCache.removeAll(keepingCapacity: true)
 			node.measureCache[AnyHashable(outer)] = result
 		}
 
 		return result
 	}
 
+	private func alignmentBaseline(_ child: NodeRecord) -> Double {
+		child.baseline ?? max(0, child.measured.height - child.style.padding.bottom)
+	}
+
+	private func commonBaseline(_ children: [NodeRecord]) -> Double {
+		children.map(alignmentBaseline).max() ?? 0
+	}
+
 	package func place(_ node: NodeRecord, in bounds: STNRect) {
+		if document.layoutCountersEnabled {
+			document.metrics.placementVisits += 1
+		}
 		if node.bounds == bounds && node.placedMeasureVersion == node.measureVersion {
 			return
 		}
@@ -235,13 +291,28 @@ import StanaText
 		node.placedMeasureVersion = node.measureVersion
 		document.metrics.placedNodes += 1
 		node.bounds = bounds
+		if node.kind == .scroll {
+			node.scrollOffset = node.normalizedScrollOffset(node.scrollOffset)
+		}
+
+		arrange(node, children: arrangedChildren(node), in: bounds) { child, rect in
+			place(child, in: rect)
+		}
+	}
+
+	/// Shared local placement rules also determine a container's exported baseline.
+	private func arrange(
+		_ node: NodeRecord,
+		children: [NodeRecord],
+		in bounds: STNRect,
+		_ apply: (NodeRecord, STNRect) -> Void
+	) {
 		let inner = bounds.inset(by: node.style.padding)
-		let children = arrangedChildren(node)
 		if node.kind == .hStack || node.kind == .vStack {
 			let horizontal = node.kind == .hStack
 			let rtl = horizontal && document.direction == .rightToLeft
 			var cursor = horizontal ? (rtl ? inner.maxX : inner.minX) : inner.minY
-			let baseline = children.map(\.baseline).max() ?? 0
+			let baseline = commonBaseline(children)
 			for child in children {
 				let s = child.measured
 				var x = inner.minX
@@ -251,7 +322,7 @@ import StanaText
 					switch node.style.alignment {
 					case .center: y += (inner.size.height - s.height) / 2
 					case .trailing: y += inner.size.height - s.height
-					case .firstBaseline: y += baseline - child.baseline
+					case .firstBaseline: y += baseline - alignmentBaseline(child)
 					case .leading: break
 					}
 
@@ -268,7 +339,7 @@ import StanaText
 					cursor += s.height + node.style.spacing
 				}
 
-				place(child, in: .init(x: x, y: y, width: s.width, height: s.height))
+				apply(child, .init(x: x, y: y, width: s.width, height: s.height))
 			}
 		} else if node.kind == .zStack {
 			for child in children {
@@ -281,14 +352,14 @@ import StanaText
 				}
 
 				let y = inner.minY + (inner.size.height - s.height) / 2
-				place(child, in: .init(x: x, y: y, width: s.width, height: s.height))
+				apply(child, .init(x: x, y: y, width: s.width, height: s.height))
 			}
 		} else {
 			for child in children {
 				let s = child.measured
 				let x = inner.minX - (node.kind == .scroll ? node.scrollOffset.x : 0)
 				let y = inner.minY - (node.kind == .scroll ? node.scrollOffset.y : 0)
-				place(child, in: .init(x: x, y: y, width: s.width, height: s.height))
+				apply(child, .init(x: x, y: y, width: s.width, height: s.height))
 			}
 		}
 	}

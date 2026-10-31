@@ -1,5 +1,8 @@
 import AppKit
 import Testing
+import StanaCore
+import StanaLayout
+import StanaPrimitives
 
 @testable import StanaPlatformMacOS
 
@@ -12,6 +15,32 @@ import Testing
 		let full = text.measure(value, font: .system(size: 16), maxWidth: .infinity, wraps: false)
 		#expect(full.size.width > prefix.size.width)
 		#expect(text.offsets(in: value, font: .system(size: 16)).count == value.utf16.count + 1)
+	}
+
+	@Test func mixedFontBaselineRowUsesFinalCoreTextMeasurements() {
+		let d = Document(size: .init(width: 300, height: 200))
+		defer { d.close() }
+		let engine = LayoutEngine(document: d, text: CoreTextService())
+		let row = d.create(.hStack, parent: d.root)
+		row.style.alignment = .firstBaseline
+		let small = d.create(.text, parent: row)
+		small.text = "Small"
+		small.style.font = .system(size: 10)
+		small.style.padding = .init(bottom: 20)
+		let large = d.create(.text, parent: row)
+		large.text = "Large"
+		large.style.font = .system(size: 30)
+		large.style.flex = 1
+		engine.layout()
+		let cold = [row.bounds, small.bounds, large.bounds]
+		#expect(abs(small.bounds.minY + small.baseline! - large.bounds.minY - large.baseline!) < 0.000_001)
+		#expect(row.baseline == max(small.baseline!, large.baseline!))
+		#expect(small.bounds.maxY <= row.bounds.maxY + 0.000_001)
+		#expect(large.bounds.maxY <= row.bounds.maxY + 0.000_001)
+		engine.useCache = false
+		d.dirty.insert(.layout)
+		engine.layout()
+		#expect([row.bounds, small.bounds, large.bounds] == cold)
 	}
 
 	@Test func nativeTextShapesWithoutWindowServerInitialization() {

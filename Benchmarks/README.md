@@ -108,3 +108,76 @@ latency summaries. The package tests check fixture correctness at sizes 1 and 8,
 raw sample/warmup handling, cleanup on failure, percentile calculation, and option
 validation. `just check` includes these tests, **not performance runs**. Debug
 executables reject timing mode to prevent accidental debug/release comparisons.
+
+## Isolated layout engine workloads
+
+The root package's package-internal `LayoutBenchmarks` executable measures engine
+layout independently of consumer mounting, node snapshot publication, and semantic
+projection. It is not the `ui-leaf-commit` workload above.
+
+```sh
+just benchmark-layout --list
+just benchmark-layout same-size --sizes 100,1000,10000 --output /tmp/layout-wide.json
+just benchmark-layout all --sizes 100,1000 --samples 30 --warmup 3 --counters --spans all --output /tmp/layout-work.json
+just benchmark-layout wrapping --sizes 100,1000 --text native --output /tmp/layout-coretext.json
+just benchmark-layout-validate
+```
+
+`Scripts/benchmark-layout.sh` is the equivalent release launcher. Every warmup and
+sample creates a fresh fixture. Setup, initial layout (except `cold`), correctness
+checks and disposal are outside the operation interval. `wrapping` times an A→B→A
+width sequence; all other trials perform one update/layout. Raw samples stay in
+execution order; there are no machine-dependent timing gates or inferred speedup
+claims. Reports identify text service, toolchain/revision/dirty state when launched
+by the script, OS/architecture/CPU/memory/power state, requested size, actual node
+count, flexible-child count, warmups and exact instrumentation configuration.
+
+| Workload | Operation |
+| --- | --- |
+| `cold` | First layout of N labels in a vertical stack |
+| `same-size` | One fixed-frame same-size text edit in a wide horizontal stack |
+| `early-resize` / `late-resize` | Increase the first/last vertical stack label's font size |
+| `batched` | N fixed-frame same-size edits sharing stack/root ancestors in one transaction |
+| `wrapping` | Narrow then restore the width of N multiline labels |
+| `scrolling` | Change only a scroll offset, reusing content measurement |
+| `flex` | Resize a flexible row with mixed weights and alternating minimum/maximum bounds |
+
+The default deterministic `TestTextService` runs and `native-CoreText` timing runs
+are labeled separately and must not be pooled. `--text native --validate` is
+rejected: automated fixture validation is deterministic; native mixed-font
+correctness lives in `Tests/Platform/MacOS/Text`. Native timing does not initialize
+a window or measure drawing. Run it separately from tests and validation.
+
+New traversal counters and timing spans are **disabled by default**. Legacy
+counters remain always enabled with their original meanings. Use `--counters` for
+new work counts, and `--spans` with `all` or a comma-separated subset of
+`layoutMeasurement,layoutPlacement,nodeSnapshots,semanticProjection`. These add
+instrumentation overhead, so compare only matching configurations. Measurement
+includes planning and container baseline calculation; placement includes applying
+bounds and scroll normalization. Optional publication probes run separately after
+layout and outside operation latency. The node probe builds the complete snapshot
+array; the semantic probe builds a fresh projection (not an incremental consumer
+commit or native accessibility publication). No publication work runs by default.
+
+### Metric definitions
+
+| Metric | Count |
+| --- | --- |
+| `measureCalls` (legacy) | Noncollapsed measurement cache misses / actual measurement evaluations |
+| `placedNodes` (legacy) | Placements passing the unchanged-bounds/measurement-version early return |
+| `measureVisits` | Every measurement entry, before collapsed/cache early returns |
+| `measureCacheHits` | Measurements restored from the current proposal cache |
+| `textMeasureCalls` | Actual invocations of `TextService.measure`, never offset/selection queries |
+| `placementVisits` | Every placement entry, including unchanged nodes |
+| `layoutOutputChanges` | Evaluated measurements whose size, optional exported baseline, or content extent changed |
+| `arrangedChildVisits` | Child records inspected while collecting arranged children in measurement/placement, including collapsed/group records |
+| `flexDistributionRounds` | Iterations of flexible-space redistribution |
+| `layoutDirtyAncestorVisits` | Node/ancestor records visited by layout invalidation, including repeated shared ancestors in a batch |
+
+These counters expose conservative traversal, not a claim that clean siblings or
+shared ancestors are skipped. Baseline and cache histories, collapsed groups,
+asymmetric LTR/RTL placement, scroll shrinkage, wheel/focus agreement, unchanged
+layout, same-output edits, batched invalidation and offset-only work have focused
+regressions alongside their owning engine suites. `LayoutBenchmarkTests` validates
+fixture contracts and CLI options; `just check` also runs untimed size-1/8 fixture
+validation. Timing reports are local artifacts, not committed performance claims.
