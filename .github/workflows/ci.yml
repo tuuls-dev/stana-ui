@@ -23,6 +23,8 @@ jobs:
         run: Scripts/check-runtime-faults.sh
       - name: External consumer examples
         run: just build-examples
+      - name: Host-only symbol compiler boundary
+        run: Scripts/check-symbol-boundaries.sh
       - name: Release build
         run: swift build -c release -Xswiftc -warnings-as-errors
       - name: Benchmark harness and workload correctness (no performance timings)

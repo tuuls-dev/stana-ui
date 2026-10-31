@@ -178,6 +178,7 @@ import Stana
 						session.press(.memorySubtract)
 					}
 				}
+				SymbolDemo()
 			}
 		}
 	}

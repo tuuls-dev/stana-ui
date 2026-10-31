@@ -116,6 +116,9 @@ import StanaText
 				intrinsic.height = max(20, intrinsic.height)
 			}
 		case .spacer: break
+		case .symbol:
+			let side = node.symbol?.size ?? 0
+			intrinsic = .init(width: side, height: side)
 		case .image: intrinsic = .init(width: 64, height: 64)
 		case .canvas, .gpuCanvas: intrinsic = .init(width: 100, height: 100)
 		case .hStack, .vStack:
@@ -322,6 +325,11 @@ import StanaText
 
 	private func updateContainerBaseline(_ node: NodeRecord, children: [NodeRecord]) {
 		switch node.kind {
+		case .symbol:
+			let local = STNRect(width: node.measured.width, height: node.measured.height)
+				.inset(by: node.style.padding, direction: document.direction)
+			node.baseline = symbolSquare(size: node.symbol?.size ?? 0, content: local).maxY
+			return
 		case .text, .button, .toggle, .textField:
 			return
 		default:

@@ -180,6 +180,7 @@ struct RenderSettings: Sendable {
 }
 
 final class PreparedFrame: Sendable {
+	let symbolResults: [SymbolRenderResult]
 	let scene: SceneSnapshot
 	let plan: PlannedGroup?
 	let surface: MetalSurface
@@ -193,8 +194,10 @@ final class PreparedFrame: Sendable {
 		surface: MetalSurface,
 		settings: RenderSettings,
 		offscreenSeconds: Double,
-		preparationSeconds: Double
+		preparationSeconds: Double,
+		symbolResults: [SymbolRenderResult] = []
 	) {
+		self.symbolResults = symbolResults
 		self.scene = scene
 		self.plan = plan
 		self.surface = surface
@@ -205,6 +208,7 @@ final class PreparedFrame: Sendable {
 }
 
 final class FrameEncoding {
+	let symbolResults = SymbolRasterResults()
 	let scene: SceneSnapshot
 	let settings: RenderSettings
 	let buffer: any MTLCommandBuffer
@@ -791,7 +795,8 @@ extension MetalEncoder {
 			surface: result,
 			settings: settings,
 			offscreenSeconds: seconds,
-			preparationSeconds: CACurrentMediaTime() - start
+			preparationSeconds: CACurrentMediaTime() - start,
+			symbolResults: frame.symbolResults.results
 		)
 	}
 

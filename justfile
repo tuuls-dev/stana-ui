@@ -46,6 +46,10 @@ version bump:
 build-examples:
     swift build --package-path Examples/Calculator -Xswiftc -warnings-as-errors
 
+# Verify symbol compiler and SwiftSyntax remain host-only after building examples.
+check-symbol-boundaries:
+    Scripts/check-symbol-boundaries.sh
+
 # Run the Calculator example.
 example:
     swift run --package-path Examples/Calculator
@@ -75,4 +79,4 @@ package package-path product bundle-id:
     Scripts/package-macos-app.sh "$1" "$2" "$3"
 
 # Run all non-GUI verification sequentially, stopping on the first failure.
-check: check-format test check-api check-runtime build-examples build-release benchmark-test benchmark-layout-validate
+check: check-format test check-api check-runtime build-examples check-symbol-boundaries build-release benchmark-test benchmark-layout-validate

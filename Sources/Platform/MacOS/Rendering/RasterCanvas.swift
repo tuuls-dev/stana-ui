@@ -33,7 +33,12 @@ struct RasterCanvas {
 		return CGPath(roundedRect: rect, cornerWidth: radius, cornerHeight: radius, transform: nil)
 	}
 
-	mutating func draw(_ commands: [DrawCommand], in context: CGContext) {
+	mutating func draw(
+		_ commands: [DrawCommand],
+		in context: CGContext,
+		symbolResults: SymbolRasterResults? = nil,
+		epoch: UInt64 = 0
+	) {
 		for command in commands {
 			switch command {
 			case .fill(let rect, let color, let radius):
@@ -71,6 +76,15 @@ struct RasterCanvas {
 				}
 
 				context.restoreGState()
+			case .symbol(let node, let symbol):
+				guard symbolResults?.failed(node: node, generation: symbol.generation) != true else { continue }
+				do {
+					try drawSymbol(symbol, in: context)
+					symbolResults?.record(node: node, generation: symbol.generation, epoch: epoch, code: nil)
+				} catch {
+					let code = (error as? SymbolPreparationFailure)?.code ?? .preparationFailed
+					symbolResults?.record(node: node, generation: symbol.generation, epoch: epoch, code: code)
+				}
 			case .image(let data, let rect):
 				var image = images[data]
 				if image == nil, data.count <= 32 * 1_024 * 1_024,

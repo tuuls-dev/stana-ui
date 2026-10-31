@@ -40,7 +40,9 @@ extension MetalEncoder {
 					allocation: allocation,
 					commands: tree.commands(intersecting: padded),
 					padded: padded,
-					scale: scale
+					scale: scale,
+					symbolResults: frame.symbolResults,
+					epoch: frame.scene.surfaceEpoch
 				)
 			)
 			let version = MetalSurface(version: tile.version, bounds: core, scale: scale, linear: false, tiles: [tile])

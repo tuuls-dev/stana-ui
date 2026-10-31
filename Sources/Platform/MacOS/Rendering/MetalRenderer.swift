@@ -117,6 +117,7 @@ private final class FramePermit: Sendable {
 	package private(set) var presentation = PresentationTracker()
 	package var onPresentation: ((UInt64, Bool) -> Void)?
 	package var onFailure: ((String) -> Void)?
+	package var onSymbolResult: ((SymbolRenderResult) -> Void)?
 	package var onDiagnostic: ((STNNodeID, STNGPUDiagnostic) -> Void)?
 	package var onGeometry: ((PresentationGeometry, Bool, Bool) -> Void)?
 	var forcedFinalMode = 0
@@ -386,6 +387,10 @@ private final class FramePermit: Sendable {
 					self.onDiagnostic?(diagnostic.node, diagnostic.diagnostic)
 				}
 
+				for result in frame.symbolResults {
+					self.onSymbolResult?(result)
+				}
+
 				self.ready = frame
 				self.permit = heldPermit
 				self.presentReady()
@@ -402,6 +407,19 @@ private final class FramePermit: Sendable {
 				}
 
 				if !(error is CancellationError), error as? STNError != .cancelled {
+					for command in scene.commands {
+						if case .symbol(let node, let symbol) = command {
+							self.onSymbolResult?(
+								.init(
+									node: node,
+									generation: symbol.generation,
+									epoch: scene.surfaceEpoch,
+									code: (error as? MetalFailure)?.kind == .execution
+										? .renderingFailed : .preparationFailed
+								)
+							)
+						}
+					}
 					let message = String(describing: error)
 					self.onFailure?(message)
 					await owner.failed(message)
@@ -775,7 +793,7 @@ private final class FramePermit: Sendable {
 		}
 	}
 
-	func prepareOffscreenForTesting(_ scene: SceneSnapshot) async throws {
+	func prepareOffscreenForTesting(_ scene: SceneSnapshot, adoptDesired: Bool = false) async throws {
 		guard !detached, let window else {
 			throw STNError.nodeDisposed
 		}
@@ -789,6 +807,14 @@ private final class FramePermit: Sendable {
 		)
 		let frame = try await owner.prepare(scene, settings: settings, referenceID: referenceID)
 		last = frame
+		if adoptDesired {
+			desired = scene
+		}
+
+		for result in frame.symbolResults {
+			onSymbolResult?(result)
+		}
+
 		backingRevision = scene.sceneRevision
 		for diagnostic in await owner.drainDiagnostics() {
 			onDiagnostic?(diagnostic.node, diagnostic.diagnostic)
@@ -858,6 +884,7 @@ private final class FramePermit: Sendable {
 		permit = nil
 		onPresentation = nil
 		onFailure = nil
+		onSymbolResult = nil
 		onDiagnostic = nil
 		onGeometry = nil
 		geometry.removeAll()

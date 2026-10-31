@@ -47,6 +47,7 @@ package struct EditingPaint {
 
 	package let document: Document
 	private var previous: [STNNodeID: Item] = [:]
+	private var previousInk: [STNNodeID: STNRect] = [:]
 	private var previousOrder: [STNNodeID] = []
 	private var contentVersions: [STNNodeID: RenderVersion] = [:]
 	private var previousGeometry: PresentationGeometry?
@@ -54,14 +55,17 @@ package struct EditingPaint {
 	private var previousGPU: [STNNodeID: STNGPUDrawing] = [:]
 	private var previousBackdrops: [STNNodeID: STNBackdropEffect] = [:]
 	private var revision: UInt64 = 0
+
 	private enum ProjectionVisit {
 		case enter(NodeRecord, STNRect, Double, Int)
 		case leave(NodeRecord, Bool)
 	}
+
 	private struct Location {
 		let group: STNNodeID
 		let index: Int
 	}
+
 	private var cpuLocations: [STNNodeID: Location] = [:]
 	private var gpuLocations: [STNNodeID: Location] = [:]
 	private var groupLocations: [STNNodeID: Location] = [:]
@@ -75,11 +79,90 @@ package struct EditingPaint {
 		self.document = document
 	}
 
+	private func symbolPresentation(_ node: NodeRecord) -> SymbolPresentation? {
+		guard let symbol = node.symbol, symbol.available else {
+			return nil
+		}
+
+		let square = symbolSquare(
+			size: symbol.size,
+			content: node.bounds.inset(by: node.style.padding, direction: document.direction)
+		)
+		guard square.size.width > 0 else {
+			return nil
+		}
+
+		let box = symbol.asset.viewBox
+		let scale = square.size.width / max(box.size.width, box.size.height)
+		let cx = square.minX + square.size.width / 2, cy = square.minY + square.size.height / 2
+		let bx = box.minX + box.size.width / 2, by = box.minY + box.size.height / 2
+		let mirror = symbol.asset.mirrorsInRTL && document.direction == .rightToLeft ? -1.0 : 1.0
+		let co = cos(symbol.effect.rotation) * symbol.effect.scale * scale
+		let si = sin(symbol.effect.rotation) * symbol.effect.scale * scale
+		let values = [
+			co * mirror, si * mirror, -si, co,
+			cx - co * mirror * bx + si * by,
+			cy + symbol.effect.verticalFraction * square.size.height - si * mirror * bx - co * by,
+		]
+		let limited = symbol.inkBounds == nil || !values.allSatisfy(\.isFinite)
+		let fit =
+			limited
+			? STNAffineTransform.identity
+			: STNAffineTransform(a: values[0], b: values[1], c: values[2], d: values[3], tx: values[4], ty: values[5])
+		let tint =
+			document.theme?.resolve(symbol.color, dark: document.dark)
+			?? symbol.color.resolved(dark: document.dark, highContrast: document.highContrast)
+		return .init(
+			asset: symbol.asset,
+			transform: fit,
+			color: tint,
+			strokeWidth: symbol.strokeWidth,
+			generation: symbol.generation,
+			preparationLimited: limited,
+			preparationScale: limited ? 1 : scale * symbol.effect.scale
+		)
+	}
+
+	private func inkBounds(_ node: NodeRecord) -> STNRect {
+		guard let presentation = symbolPresentation(node), let symbol = node.symbol else {
+			return node.bounds
+		}
+
+		guard !presentation.preparationLimited, let local = symbol.inkBounds,
+			let ink = symbolEnclosing(presentation.transform, local)
+		else {
+			return node.bounds.union(.init(width: document.viewport.width, height: document.viewport.height))
+		}
+
+		return node.bounds.union(ink)
+	}
+
+	private func projectedInkBounds(_ node: NodeRecord) -> STNRect {
+		var bounds = inkBounds(node)
+		var ancestor: NodeRecord? = node
+		while let item = ancestor {
+			if item.style.clip || item.kind == .scroll {
+				bounds = bounds.intersection(item.bounds)
+			}
+
+			let origin = item.bounds.origin
+			let transform = STNAffineTransform.translation(x: origin.x, y: origin.y).concatenating(item.style.transform)
+				.concatenating(.translation(x: -origin.x, y: -origin.y))
+			bounds =
+				symbolEnclosing(transform, bounds)
+				?? .init(width: document.viewport.width, height: document.viewport.height)
+			ancestor = item.parent
+		}
+
+		return bounds
+	}
+
 	private func record(_ node: NodeRecord) -> [DrawCommand] {
 		let style = node.style
 		let bounds = node.bounds
 		let viewport = STNRect(width: document.viewport.width, height: document.viewport.height)
 		var local: [DrawCommand] = []
+
 		func color(_ c: STNColor) -> STNColor {
 			document.theme?.resolve(c, dark: document.dark)
 				?? c.resolved(dark: document.dark, highContrast: document.highContrast)
@@ -224,6 +307,10 @@ package struct EditingPaint {
 			local.append(.popClip)
 		}
 
+		if let symbol = symbolPresentation(node) {
+			local.append(.symbol(node.id, symbol))
+		}
+
 		if node.kind == .image, let data = node.imageData {
 			local.append(.image(data, inner))
 		}
@@ -246,6 +333,7 @@ package struct EditingPaint {
 		if document.focused == node.id {
 			local.append(.stroke(bounds, color(.accent), width: 2, radius: max(5, style.cornerRadius)))
 		}
+
 		return local
 	}
 
@@ -257,6 +345,7 @@ package struct EditingPaint {
 		{
 			return patched
 		}
+
 		cpuLocations.removeAll()
 		gpuLocations.removeAll()
 		groupLocations.removeAll()
@@ -294,13 +383,22 @@ package struct EditingPaint {
 					if let parent = groupStack.last {
 						groupLocations[node.id] = Location(group: parent, index: paintStack.last!.count)
 					}
+
 					paintStack[paintStack.count - 1].append(.group(group))
 				}
+
 				continue
 			}
-			guard case .enter(let node, let inheritedClip, let inheritedOpacity, let depth) = action else { continue }
+
+			guard case .enter(let node, let inheritedClip, let inheritedOpacity, let depth) = action else {
+				continue
+			}
+
 			precondition(depth < 512, "Stana: paint depth budget exceeded")
-			guard node.style.visibility == .visible else { continue }
+			guard node.style.visibility == .visible else {
+				continue
+			}
+
 			let style = node.style
 			let bounds = node.bounds
 			let oldStyle = previousCompositing[node.id]
@@ -311,16 +409,21 @@ package struct EditingPaint {
 				damage.add(previousGeometry?.entries[node.id]?.projectedBounds ?? .zero)
 				damage.add(geometry.entries[node.id]?.projectedBounds ?? .zero)
 			}
+
 			previousCompositing[node.id] = style
 			previousGPU[node.id] = node.gpuDrawing
 			previousBackdrops[node.id] = node.backdropEffect
 			let clip = style.clip || node.kind == .scroll ? inheritedClip.intersection(bounds) : inheritedClip
+			let projectedInk = projectedInkBounds(node)
+			damage.add(previousInk[node.id] ?? .zero)
+			damage.add(projectedInk)
+			previousInk[node.id] = projectedInk
 			let local = record(node)
 			let inner = bounds.inset(by: style.padding, direction: document.direction)
 
 			let opacity = style.opacity * (style.isEnabled ? 1 : 0.5)
 			// Include inherited compositing state so ancestor opacity/clip changes invalidate descendants.
-			let item = Item(commands: local, bounds: bounds)
+			let item = Item(commands: local, bounds: inkBounds(node))
 			items[node.id] = item
 			order.append(node.id)
 			if previous[node.id] != item {
@@ -339,7 +442,9 @@ package struct EditingPaint {
 
 			cpuLocations[node.id] = Location(group: groupStack.last!, index: paintStack.last!.count)
 			paintStack[paintStack.count - 1]
-				.append(.cpu(.init(id: node.id, version: contentVersions[node.id]!, bounds: bounds, commands: local)))
+				.append(
+					.cpu(.init(id: node.id, version: contentVersions[node.id]!, bounds: item.bounds, commands: local))
+				)
 
 			if node.kind == .gpuCanvas {
 				gpuLocations[node.id] = Location(group: groupStack.last!, index: paintStack.last!.count)
@@ -370,6 +475,7 @@ package struct EditingPaint {
 		}
 
 		for (id, old) in previous where items[id] == nil {
+			damage.add(previousInk.removeValue(forKey: id) ?? old.bounds)
 			damage.add(old.bounds)
 		}
 
@@ -379,9 +485,13 @@ package struct EditingPaint {
 		previousGeometry = geometry
 		let live = Set(items.keys)
 		contentVersions = contentVersions.filter { live.contains($0.key) }
+
 		previousCompositing = previousCompositing.filter { live.contains($0.key) }
+
 		previousGPU = previousGPU.filter { live.contains($0.key) }
+
 		previousBackdrops = previousBackdrops.filter { live.contains($0.key) }
+
 		document.dirty.remove(.paint)
 		document.paintChanges.removeAll(keepingCapacity: true)
 		structureRevision = document.structureRevision
@@ -394,46 +504,83 @@ package struct EditingPaint {
 			damage: full ? [viewport] : damage.resolved(in: viewport),
 			commands: commands,
 			size: document.viewport,
-			paint: paintStack[0].first.flatMap { if case .group(let group) = $0 { group } else { nil } },
+			paint: paintStack[0].first
+				.flatMap {
+					if case .group(let group) = $0 {
+						group
+					} else {
+						nil
+					}
+				},
 			colorMode: document.renderingColorMode,
 			geometry: geometry
 		)
 	}
 
 	private func patch(surfaceEpoch: UInt64, backingRevision: UInt64) -> SceneSnapshot? {
-		guard groups[document.root.id] != nil else { return nil }
+		guard groups[document.root.id] != nil else {
+			return nil
+		}
+
 		let changes = document.paintChanges
 		for (id, _) in changes {
 			guard let node = document.nodes[id], cpuLocations[id] != nil,
 				previousCompositing[id]?.visibility == node.style.visibility
-			else { return nil }
+			else {
+				return nil
+			}
+
 			let opacity = node.style.opacity * (node.style.isEnabled ? 1 : 0.5)
 			let isolated =
 				node.kind == .root || node.style.retained || opacity != 1 || node.style.clip || node.kind == .scroll
-			if isolated != (groups[id] != nil) { return nil }
+			if isolated != (groups[id] != nil) {
+				return nil
+			}
 		}
 
 		var dirtyGroups = Set<STNNodeID>()
 		var damage = DamageTracker()
+		if changes.values.contains(where: {
+			$0.contains(.geometry) || $0.contains(.composite)
+		}) {
+			for node in document.orderedNodes where node.symbol != nil {
+				damage.add(previousInk[node.id] ?? .zero)
+				let ink = projectedInkBounds(node)
+				damage.add(ink)
+				previousInk[node.id] = ink
+			}
+		}
+
 		let geometryChanged = changes.values.contains { $0.contains(.geometry) || $0.contains(.composite) }
+
 		let geometry = geometryChanged ? document.projectGeometry() : previousGeometry ?? document.projectGeometry()
 		for (id, change) in changes {
-			guard let node = document.nodes[id], let location = cpuLocations[id] else { continue }
+			guard let node = document.nodes[id], let location = cpuLocations[id] else {
+				continue
+			}
+
+			damage.add(previousInk[id] ?? .zero)
+			let newInk = projectedInkBounds(node)
+			damage.add(newInk)
+			previousInk[id] = newInk
 			damage.add(previousGeometry?.entries[id]?.projectedBounds ?? .zero)
 			damage.add(geometry.entries[id]?.projectedBounds ?? .zero)
 			if change.contains(.content) || change.contains(.geometry) {
 				let commands = record(node)
-				let item = Item(commands: commands, bounds: node.bounds)
+				damage.add(previous[id]?.bounds ?? .zero)
+				let item = Item(commands: commands, bounds: inkBounds(node))
+				damage.add(item.bounds)
 				if previous[id] != item {
 					contentVersions[id] = RenderVersion()
 					previous[id] = item
 					document.metrics.recordedPaintItems += 1
 				}
+
 				groups[location.group]!.children = groups[location.group]!.children
 					.replacing(
 						at: location.index,
 						with: .cpu(
-							.init(id: id, version: contentVersions[id]!, bounds: node.bounds, commands: commands)
+							.init(id: id, version: contentVersions[id]!, bounds: item.bounds, commands: commands)
 						)
 					)
 				document.metrics.paintIndexUpdates += 1
@@ -456,6 +603,7 @@ package struct EditingPaint {
 						)
 				}
 			}
+
 			if let group = groups[id] {
 				groups[id] = group.updating(
 					bounds: node.bounds,
@@ -467,27 +615,37 @@ package struct EditingPaint {
 				)
 				dirtyGroups.insert(id)
 			}
+
 			dirtyGroups.insert(location.group)
 			previousCompositing[id] = node.style
 			previousGPU[id] = node.gpuDrawing
 			previousBackdrops[id] = node.backdropEffect
 		}
+
 		var ancestors = Set<STNNodeID>()
 		for id in dirtyGroups {
 			var current: STNNodeID? = id
 			while let next = current {
-				if !ancestors.insert(next).inserted { break }
+				if !ancestors.insert(next).inserted {
+					break
+				}
+
 				current = groupLocations[next]?.group
 			}
 		}
-		for id in ancestors.sorted(by: { groupDepths[$0, default: 0] > groupDepths[$1, default: 0] }) {
+
+		for id in ancestors.sorted(by: {
+			groupDepths[$0, default: 0] > groupDepths[$1, default: 0]
+		}) {
 			if let location = groupLocations[id], let group = groups[id] {
 				groups[location.group]!.children = groups[location.group]!.children
 					.replacing(at: location.index, with: .group(group))
 				document.metrics.paintIndexUpdates += 1
 			}
+
 			document.metrics.paintAncestorUpdates += 1
 		}
+
 		previousGeometry = geometry
 		document.paintChanges.removeAll(keepingCapacity: true)
 		document.dirty.remove(.paint)

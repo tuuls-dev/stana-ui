@@ -68,7 +68,7 @@ public struct STNSemanticNode: Equatable, Sendable {
 			case .button: role = .button
 			case .toggle: role = .checkBox
 			case .textField: role = .textField
-			case .image, .canvas: role = node.style.accessibilityLabel == nil ? nil : .image
+			case .image, .canvas, .symbol: role = node.style.accessibilityLabel == nil ? nil : .image
 			case .scroll: role = .scrollArea
 			case .focusScope: role = .group
 			default: role = node.style.semanticGroup ? .group : nil

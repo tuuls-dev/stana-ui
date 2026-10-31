@@ -82,6 +82,7 @@ import StanaText
 	package var onIdle: (() -> Void)?
 	package var onCommand: ((UInt64) -> Void)?
 	package var onText: ((Int32, String, NSRange?, NSRange, UInt64, UInt64) -> Void)?
+	package var onSymbolVisibility: ((Bool) -> Void)?
 	package var onFrame: ((Double, Double) -> Void)?
 	package var options: STNWindowOptions
 	package var state = STNWindowState()
@@ -152,10 +153,58 @@ import StanaText
 				startObserving()
 			}
 
+			observeSymbolVisibility()
 			publishState()
 		} catch {
 			close()
 			throw error
+		}
+	}
+
+	package var symbolIsVisible: Bool {
+		!closed && nativeWindow.isVisible && !nativeWindow.isMiniaturized && view.window != nil
+			&& !view.isHiddenOrHasHiddenAncestor && NSApp?.isHidden != true
+	}
+
+	package func publishSymbolVisibility() {
+		onSymbolVisibility?(symbolIsVisible)
+	}
+
+	private func observeSymbolVisibility() {
+		// Notifications trigger a check of explicit visibility only; occlusion is not hiding.
+		for name in [
+			NSWindow.didChangeOcclusionStateNotification, NSWindow.didMiniaturizeNotification,
+			NSWindow.didDeminiaturizeNotification,
+			NSWindow.willCloseNotification,
+		] {
+			let closing = name == NSWindow.willCloseNotification
+			notificationObservers.append(
+				NotificationCenter.default.addObserver(forName: name, object: nativeWindow, queue: .main) {
+					[weak self] _ in
+					MainActor.assumeIsolated {
+						guard let self else {
+							return
+						}
+
+						if closing {
+							self.onSymbolVisibility?(false)
+						} else {
+							self.publishSymbolVisibility()
+						}
+					}
+				}
+			)
+		}
+
+		for name in [NSApplication.didHideNotification, NSApplication.didUnhideNotification] {
+			notificationObservers.append(
+				NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+					MainActor.assumeIsolated {
+						self?.publishSymbolVisibility()
+						self?.graphics?.visibilityChanged()
+					}
+				}
+			)
 		}
 	}
 
@@ -211,6 +260,8 @@ import StanaText
 		onEvent = nil
 		onDraw = nil
 		onText = nil
+		onSymbolVisibility?(false)
+		onSymbolVisibility = nil
 		onState = nil
 		onPointer = nil
 		shouldClose = nil

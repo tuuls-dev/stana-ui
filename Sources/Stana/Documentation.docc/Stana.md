@@ -29,3 +29,7 @@ A component describes one mount. Signals update the properties of retained nodes
 - <doc:DesktopApplications>
 - <doc:WindowConfiguration>
 - <doc:HybridRendering>
+
+### Symbols
+
+- <doc:Symbols>

@@ -139,3 +139,9 @@ Accessibility elements are separate from drawing nodes. Complete typed snapshots
 - Shader code is trusted application Metal, not a portable shader language or a sandbox. Compilation/binding failure retains a prior valid program; GPU execution failure invalidates the renderer epoch and permits bounded recovery.
 - Renderer diagnostics report measured timings, copies, workers, memory, and native timestamps; they are not a performance or physical-display qualification claim.
 - Native capabilities sit behind common protocols; additional OS implementations are not stubbed into the public API.
+
+## Compile-time symbols
+
+`StanaSymbolMacros` and `StanaSymbolCompiler` are host-only build targets. The macro validates literal SVG and emits typed `_compiled(version: 1, ...)` expressions; neither SVG parsing nor SwiftSyntax implementation libraries belong to runtime products. `StanaPrimitives` owns immutable shared geometry; the public Stana wrapper and underscored generated-code bridge preserve external-package access without exposing native objects.
+
+Each mounted `STNSymbol` reconciles final committed inputs into its own deterministic playback state. Scene snapshots own portable assets and resolved paint-only presentation. Effect transforms and ink bounds remain separate from layout, hit testing, and semantic geometry. The macOS worker pipeline constructs bounded native paths, shares immutable prepared owners through a bounded LRU, rasterizes existing CPU tiles, and uses normal Metal composition and capture. Generation-tagged feedback rejects stale work and delivers symbol errors after commit. macOS is the only implemented rendering backend.

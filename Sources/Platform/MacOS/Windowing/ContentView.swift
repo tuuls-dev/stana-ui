@@ -43,6 +43,7 @@ final class ContentView: NSView, @MainActor NSTextInputClient, NSMenuItemValidat
 
 	override func viewDidMoveToWindow() {
 		super.viewDidMoveToWindow()
+		host?.publishSymbolVisibility()
 		if window != nil {
 			host?.graphics?.visibilityChanged()
 		}
@@ -51,6 +52,16 @@ final class ContentView: NSView, @MainActor NSTextInputClient, NSMenuItemValidat
 			window.makeFirstResponder(self)
 			inputContext?.activate()
 		}
+	}
+
+	override func viewDidHide() {
+		super.viewDidHide()
+		host?.publishSymbolVisibility()
+	}
+
+	override func viewDidUnhide() {
+		super.viewDidUnhide()
+		host?.publishSymbolVisibility()
 	}
 
 	override func setFrameSize(_ newSize: NSSize) {

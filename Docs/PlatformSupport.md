@@ -8,7 +8,7 @@ The deployment target is not evidence that every OS/architecture combination has
 
 ## Included
 
-Boxes/stacks/overlays, spacers, shaped labels, bitmap images, custom buttons/toggles, single-line editing (mouse/keyboard selection, read-only configuration, grouped undo, styling, and native macOS text services), vertical scrolling, explicit conditional/keyed regions, reusable components, focus grouping, recorded decorative drawing, multiple configurable windows (including frameless windows), native panels/sheets/tabs, toolbars and retained chrome surfaces, commands/menus/shortcuts, clipboard, system file panels/alerts, and unsigned app assembly.
+Boxes/stacks/overlays, spacers, shaped labels, bitmap images, compile-time literal SVG symbols with rotate/pulse/bounce effects, custom buttons/toggles, single-line editing (mouse/keyboard selection, read-only configuration, grouped undo, styling, and native macOS text services), vertical scrolling, explicit conditional/keyed regions, reusable components, focus grouping, recorded decorative drawing, multiple configurable windows (including frameless windows), native panels/sheets/tabs, toolbars and retained chrome surfaces, commands/menus/shortcuts, clipboard, system file panels/alerts, and unsigned app assembly.
 
 ## Known boundaries
 
@@ -17,7 +17,7 @@ Boxes/stacks/overlays, spacers, shaped labels, bitmap images, custom buttons/tog
 - No virtualized list: scroll views mount all children.
 - ZStack supports logical leading/center/trailing horizontal alignment and vertical centering within its padded content rectangle. Overlay spacing and baseline alignment are not supported; HStack/VStack retain their existing alignment and spacing APIs.
 - Text-field completion uses the platform completion action; inline predictive text and full inline Writing Tools are not implemented. System Services/Writing Tools availability follows OS/device configuration.
-- No multiline editor, selectable display text, grid, SVG interpreter, animation framework, plugin ABI, or document-app lifecycle.
+- No multiline editor, selectable display text, grid, runtime SVG interpreter/import API, general animation framework, plugin ABI, or document-app lifecycle.
 - Metal is the default renderer. CPU decorative drawing remains supported alongside GPU shapes, trusted application Metal programs, affine retained layers, and ordered backdrop effects. There is no silent CPU fallback for an unavailable Metal device or failed shader.
 - Submission/offscreen completion do not prove presentation. Native positive timestamps and matching GPU success confirm last-known geometry; zero/missing observations remain explicitly unknown.
 - Native shaping/segmentation behavior follows OS data, not a claimed fixed latest Unicode release.
@@ -36,3 +36,7 @@ Text-field behavior, native service coverage, captures, and pending interoperabi
 Hybrid rendering correctness evidence and remaining qualification are recorded in [Metal verification](Verification/Metal.md).
 
 The Swift backend’s coordinate-input regression and remaining qualification limits are recorded in [Metal verification](Verification/Metal.md).
+
+Symbol support is a strict compile-time SVG subset with portable immutable assets and the existing macOS renderer only. See [Symbols](../Sources/Stana/Documentation.docc/Symbols.md) for the exact whitelist and lifecycle contracts.
+
+Symbol implementation evidence and remaining manual qualification are recorded in [Symbols verification](Verification/Symbols.md).
